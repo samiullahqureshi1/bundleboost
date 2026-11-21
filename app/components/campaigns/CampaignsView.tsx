@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import type { CampaignStatusValue, DiscountTypeValue } from "../../lib/campaign-validation";
 import { campaignState, type SyncStatusValue } from "../../lib/campaign-state";
 import { formatTierSummary } from "../../lib/format";
 import { readValue, useFieldEvents } from "../use-field-events";
+import { on } from "../bool-attrs";
 
 export type CampaignRow = {
   id: string;
@@ -45,18 +46,34 @@ export function CampaignsView({
   currencyCode,
   initialTab,
   deleting,
+  isBulkBusy,
   onDelete,
+  onBulkStatus,
+  onBulkDelete,
 }: {
   campaigns: CampaignRow[];
   currencyCode: string | null;
   initialTab: Tab;
   deleting: boolean;
+  isBulkBusy: boolean;
   onDelete: (campaign: CampaignRow) => void;
+  onBulkStatus: (ids: string[], status: CampaignStatusValue) => void;
+  onBulkDelete: (ids: string[]) => void;
 }) {
   const [tab, setTab] = useState<Tab>(initialTab);
   const [query, setQuery] = useState("");
   const [doomed, setDoomed] = useState<CampaignRow | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const headerCheckboxRef = useRef<HTMLInputElement>(null);
+  const prevBulkBusy = useRef(isBulkBusy);
   const searchRef = useFieldEvents<HTMLElementTagNameMap["s-search-field"]>((el) => setQuery(readValue(el)));
+
+  useEffect(() => {
+    if (prevBulkBusy.current && !isBulkBusy) {
+      setSelectedIds([]);
+    }
+    prevBulkBusy.current = isBulkBusy;
+  }, [isBulkBusy]);
 
   const count = (t: Tab) =>
     t === "ALL" ? campaigns.filter((c) => c.status !== "ARCHIVED").length : campaigns.filter((c) => c.status === t).length;
@@ -70,6 +87,34 @@ export function CampaignsView({
           text.toLowerCase().includes(needle),
         )),
   );
+
+  const allShownSelected = shown.length > 0 && shown.every((c) => selectedIds.includes(c.id));
+  const someShownSelected = shown.some((c) => selectedIds.includes(c.id));
+  const selectedCampaigns = campaigns.filter((c) => selectedIds.includes(c.id));
+  const canActivate = selectedCampaigns.some((c) => c.status !== "ACTIVE");
+  const canPause = selectedCampaigns.some((c) => c.status === "ACTIVE");
+  const canArchive = selectedCampaigns.some((c) => c.status !== "ARCHIVED");
+
+  useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate = someShownSelected && !allShownSelected;
+    }
+  }, [someShownSelected, allShownSelected]);
+
+  const toggleAllShown = () => {
+    if (allShownSelected) {
+      const shownIds = new Set(shown.map((c) => c.id));
+      setSelectedIds((prev) => prev.filter((id) => !shownIds.has(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...shown.map((c) => c.id)])));
+    }
+  };
+
+  const toggleOne = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  };
 
   return (
     <s-page heading="Campaigns" inlineSize="large">
@@ -121,9 +166,74 @@ export function CampaignsView({
               </div>
             </div>
 
+            {selectedIds.length > 0 && (
+              <div className="bb-bulk-bar">
+                <div className="bb-bulk-bar__info">
+                  <span className="bb-bulk-bar__count">
+                    <strong>{selectedIds.length}</strong> {selectedIds.length === 1 ? "campaign selected" : "campaigns selected"}
+                  </span>
+                  <button
+                    type="button"
+                    className="bb-bulk-bar__deselect"
+                    onClick={() => setSelectedIds([])}
+                  >
+                    Deselect all
+                  </button>
+                </div>
+                <div className="bb-bulk-bar__actions">
+                  {canActivate && (
+                    <s-button
+                      variant="secondary"
+                      {...on({ disabled: isBulkBusy })}
+                      onClick={() => onBulkStatus(selectedIds, "ACTIVE")}
+                    >
+                      Activate
+                    </s-button>
+                  )}
+                  {canPause && (
+                    <s-button
+                      variant="secondary"
+                      {...on({ disabled: isBulkBusy })}
+                      onClick={() => onBulkStatus(selectedIds, "PAUSED")}
+                    >
+                      Pause
+                    </s-button>
+                  )}
+                  {canArchive && (
+                    <s-button
+                      variant="secondary"
+                      {...on({ disabled: isBulkBusy })}
+                      onClick={() => onBulkStatus(selectedIds, "ARCHIVED")}
+                    >
+                      Archive
+                    </s-button>
+                  )}
+                  <s-button
+                    variant="secondary"
+                    tone="critical"
+                    commandFor="bulk-delete-modal"
+                    command="--show"
+                    {...on({ disabled: isBulkBusy })}
+                  >
+                    Delete
+                  </s-button>
+                </div>
+              </div>
+            )}
+
             {shown.length ? (
               <>
-                <div className="bb-table__head" aria-hidden="true">
+                <div className="bb-table__head">
+                  <div className="bb-table__select">
+                    <input
+                      type="checkbox"
+                      ref={headerCheckboxRef}
+                      className="bb-checkbox"
+                      checked={allShownSelected}
+                      onChange={toggleAllShown}
+                      aria-label="Select all campaigns"
+                    />
+                  </div>
                   <span>Campaign</span>
                   <span>Status</span>
                   <span>Tiers</span>
@@ -135,8 +245,18 @@ export function CampaignsView({
                   {shown.map((c) => {
                     const state = campaignState(c.status, c.syncStatus);
                     const deletable = c.status === "DRAFT" || c.status === "ARCHIVED";
+                    const isSelected = selectedIds.includes(c.id);
                     return (
-                      <li key={c.id}>
+                      <li key={c.id} className={isSelected ? "is-selected" : undefined}>
+                        <div className="bb-table__select">
+                          <input
+                            type="checkbox"
+                            className="bb-checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleOne(c.id)}
+                            aria-label={`Select ${c.name}`}
+                          />
+                        </div>
                         <Link className="bb-crow" to={`/app/campaigns/${c.id}`}>
                           <span className="bb-crow__main">
                             <span className="bb-crow__name">{c.name}</span>
@@ -182,6 +302,29 @@ export function CampaignsView({
           </div>
         )}
       </div>
+
+      <s-modal id="bulk-delete-modal" heading={`Delete ${selectedIds.length === 1 ? "campaign" : `${selectedIds.length} campaigns`}?`}>
+        <s-paragraph>
+          {selectedIds.length === 1
+            ? "This campaign will be permanently deleted. This can't be undone."
+            : `These ${selectedIds.length} campaigns will be permanently deleted. This can't be undone.`}
+        </s-paragraph>
+        <s-button
+          slot="primary-action"
+          variant="primary"
+          tone="critical"
+          {...on({ loading: isBulkBusy, disabled: isBulkBusy })}
+          onClick={() => {
+            (document.getElementById("bulk-delete-modal") as (HTMLElement & { hideOverlay?: () => void }) | null)?.hideOverlay?.();
+            onBulkDelete(selectedIds);
+          }}
+        >
+          Delete
+        </s-button>
+        <s-button slot="secondary-actions" commandFor="bulk-delete-modal" command="--hide">
+          Cancel
+        </s-button>
+      </s-modal>
 
       <s-modal id="delete-campaign-modal" heading="Delete campaign?">
         <s-paragraph>

@@ -2,6 +2,7 @@ import "@shopify/shopify-app-react-router/adapters/node";
 import {
   ApiVersion,
   AppDistribution,
+  BillingInterval,
   shopifyApp,
 } from "@shopify/shopify-app-react-router/server";
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
@@ -10,6 +11,31 @@ import { env } from "./.server/env";
 import { onShopAuthenticated } from "./.server/services/shop.service";
 
 const config = env();
+
+export const PLAN_GROWTH = "Growth";
+export const PLAN_PRO = "Pro";
+export type BillingPlanName = typeof PLAN_GROWTH | typeof PLAN_PRO;
+
+export const billingConfig = {
+  [PLAN_GROWTH]: {
+    lineItems: [
+      {
+        amount: 7.99,
+        currencyCode: "USD",
+        interval: BillingInterval.Every30Days as const,
+      },
+    ],
+  },
+  [PLAN_PRO]: {
+    lineItems: [
+      {
+        amount: 14.99,
+        currencyCode: "USD",
+        interval: BillingInterval.Every30Days as const,
+      },
+    ],
+  },
+};
 
 const shopify = shopifyApp({
   apiKey: config.SHOPIFY_API_KEY,
@@ -20,6 +46,7 @@ const shopify = shopifyApp({
   authPathPrefix: "/auth",
   sessionStorage: new PrismaSessionStorage(prisma),
   distribution: AppDistribution.AppStore,
+  billing: billingConfig,
   future: {
     expiringOfflineAccessTokens: true,
   },

@@ -94,9 +94,30 @@ describe("live limits", () => {
 });
 
 describe("plan lookup", () => {
-  it("is Free and unconfigured without Partner API credentials", async () => {
+  it("is Free and configured when there is no active subscription", async () => {
     const result = await getShopPlan(shopId, free.admin);
-    expect(result).toMatchObject({ configured: false, verified: false, plan: { handle: "free" } });
+    expect(result).toMatchObject({ configured: true, verified: true, plan: { handle: "free" } });
+  });
+
+  it("detects an active Growth subscription from Shopify", async () => {
+    const adminWithSub = createAdminDouble(catalog);
+    adminWithSub.setActiveSubscriptions([
+      {
+        id: "gid://shopify/AppSubscription/123",
+        name: "Growth",
+        status: "ACTIVE",
+        test: true,
+        trialDays: 0,
+        currentPeriodEnd: "2026-12-31T00:00:00Z",
+      },
+    ]);
+    const result = await getShopPlan(shopId, adminWithSub.client, { fresh: true });
+    expect(result).toMatchObject({
+      configured: true,
+      verified: true,
+      plan: { handle: "growth" },
+      renewsAt: "2026-12-31T00:00:00Z",
+    });
   });
 
   it("falls back to the last known plan from the cache", async () => {

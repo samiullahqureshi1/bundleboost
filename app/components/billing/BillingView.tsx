@@ -1,3 +1,4 @@
+import { Form, useNavigation } from "react-router";
 import { PLAN_FOOTNOTES, PLAN_ORDER, PLANS, type Plan, type PlanHandle } from "../../lib/plans";
 
 export type BillingViewData = {
@@ -161,14 +162,17 @@ function PlanCard({
   plan,
   current,
   currentPrice,
-  plansUrl,
 }: {
   plan: Plan;
   current: boolean;
   currentPrice: number;
-  plansUrl: string | null;
+  plansUrl?: string | null;
 }) {
-  const action = plan.price > currentPrice ? `Upgrade to ${plan.name}` : `Switch to ${plan.name}`;
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state !== "idle" && navigation.formData?.get("plan") === plan.handle;
+  const isUpgrade = plan.price > currentPrice;
+  const action = isUpgrade ? `Upgrade to ${plan.name}` : `Switch to ${plan.name}`;
+
   return (
     <article className={["bb-glass", "bb-plan", plan.badge && "bb-plan--top", current && "bb-plan--current"].filter(Boolean).join(" ")}>
       {plan.badge && <span className="bb-plan__badge">{plan.badge}</span>}
@@ -194,18 +198,17 @@ function PlanCard({
         <span className="bb-btn bb-btn--glass bb-plan__cta" aria-disabled="true">
           Current plan
         </span>
-      ) : plansUrl ? (
-        <a
-          className={`bb-btn ${plan.price > currentPrice ? "bb-btn--dark" : "bb-btn--glass"} bb-plan__cta`}
-          href={plansUrl}
-          target="_top"
-        >
-          {action}
-        </a>
       ) : (
-        <span className="bb-btn bb-btn--glass bb-plan__cta" aria-disabled="true">
-          Not available yet
-        </span>
+        <Form method="post" className="bb-plan__form">
+          <input type="hidden" name="plan" value={plan.handle} />
+          <button
+            type="submit"
+            className={`bb-btn ${isUpgrade ? "bb-btn--dark" : "bb-btn--glass"} bb-plan__cta`}
+            disabled={navigation.state !== "idle"}
+          >
+            {isSubmitting ? "Processing..." : action}
+          </button>
+        </Form>
       )}
     </article>
   );

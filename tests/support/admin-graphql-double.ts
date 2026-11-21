@@ -53,6 +53,7 @@ export function createAdminDouble(catalog: FakeProduct[]) {
   const appMetafields = new Map<string, string>();
   const failures: { operation: string; message: string }[] = [];
   let nextDiscount = 1000;
+  let activeSubs: { id: string; name: string; status: string; test: boolean; trialDays: number; currentPeriodEnd: string | null }[] = [];
 
   const userError = (message: string, field = ["base"]) => ({ field, message, code: null });
   const takeFailure = (operation: string) => {
@@ -124,6 +125,21 @@ export function createAdminDouble(catalog: FakeProduct[]) {
       if (op === "BundleBoostAppInstallationId") {
         return Response.json({ data: { currentAppInstallation: { id: "gid://shopify/AppInstallation/1" } } });
       }
+      if (op === "BundleBoostActiveSubscriptions") {
+        if (failure) return Response.json({ errors: [{ message: failure.message }] }, { status: 500 });
+        return Response.json({ data: { currentAppInstallation: { activeSubscriptions: activeSubs } } });
+      }
+      if (op === "BundleBoostSubscriptionCancel") {
+        if (failure) return Response.json({ errors: [{ message: failure.message }] }, { status: 500 });
+        return Response.json({
+          data: {
+            appSubscriptionCancel: {
+              appSubscription: { id: v.id, status: "CANCELLED" },
+              userErrors: [],
+            },
+          },
+        });
+      }
       if (query.includes("BundleBoostProductsById")) {
         const ids = (options?.variables?.ids ?? []) as string[];
         const nodes = ids.map((id) => {
@@ -150,6 +166,9 @@ export function createAdminDouble(catalog: FakeProduct[]) {
     calls,
     discounts,
     appMetafields,
+    setActiveSubscriptions(subs: typeof activeSubs) {
+      activeSubs = subs;
+    },
     failNext(operation: string, message: string) {
       failures.push({ operation, message });
     },

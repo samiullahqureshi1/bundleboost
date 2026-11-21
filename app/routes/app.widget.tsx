@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import {
+  Link,
   useFetcher,
   useLoaderData,
+  useLocation,
+  useNavigate,
   type ActionFunctionArgs,
   type HeadersFunction,
   type LinksFunction,
   type LoaderFunctionArgs,
 } from "react-router";
-import { Link } from "react-router";
 import { SaveBar, useAppBridge } from "@shopify/app-bridge-react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import prisma from "../db.server";
@@ -18,7 +20,7 @@ import { getWidgetSettings, updateWidgetSettings } from "../.server/services/set
 import { syncStorefrontConfig } from "../.server/services/storefront-sync.service";
 import { themeEditorUrl } from "../.server/theme";
 import { getShopPlan } from "../.server/services/billing.service";
-import { applyWidgetPlan, planFor, planFromHandle, type WidgetField } from "../lib/plans";
+import { planFor, planFromHandle, type WidgetField } from "../lib/plans";
 import { EditorCard } from "../components/EditorCard";
 import { ColorField, NumberField, TextField } from "../components/Fields";
 import { RouteError } from "../components/RouteError";
@@ -40,6 +42,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       select: {
         name: true,
         discountType: true,
+        products: { take: 1, select: { title: true, imageUrl: true } },
         tiers: { orderBy: { position: "asc" }, select: { minQuantity: true, value: true, label: true } },
       },
     }),
@@ -63,6 +66,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     liveCount,
     previewCampaign: live && {
       name: live.name,
+      productTitle: live.products[0]?.title ?? null,
+      productImageUrl: live.products[0]?.imageUrl ?? null,
       type: live.discountType === "PERCENTAGE" ? ("percentage" as const) : ("fixed" as const),
       tiers: live.tiers.map((t) => ({ qty: t.minQuantity, value: Number(t.value), label: t.label ?? "" })),
     },
@@ -115,6 +120,25 @@ export default function WidgetCustomization() {
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const fetcher = useFetcher<Result>();
   const shopify = useAppBridge();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleUpgradeClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const target = `/app/billing${location.search}`;
+    navigate(target);
+    try {
+      (window as unknown as { shopify?: { navigate?: (url: string) => void } }).shopify?.navigate?.(target);
+    } catch {
+      // Ignore if not in App Bridge context
+    }
+    document.dispatchEvent(
+      new CustomEvent("shopify:navigate", {
+        detail: { href: "/app/billing" },
+        bubbles: true,
+      }),
+    );
+  };
   const saving = fetcher.state !== "idle";
   const parsed = widgetSettingsSchema.safeParse(settings);
   const errors: Record<string, string> = fetcher.data && !fetcher.data.ok ? fetcher.data.fieldErrors ?? {} : {};
@@ -153,8 +177,8 @@ export default function WidgetCustomization() {
   const activePreset = PRESETS.find(
     (p) =>
       p.accentColor.toLowerCase() === settings.accentColor.toLowerCase() &&
-      p.textColor.toLowerCase() === settings.textColor.toLowerCase() &&
-      p.backgroundColor.toLowerCase() === settings.backgroundColor.toLowerCase(),
+      (!can("textColor") || p.textColor.toLowerCase() === settings.textColor.toLowerCase()) &&
+      (!can("backgroundColor") || p.backgroundColor.toLowerCase() === settings.backgroundColor.toLowerCase()),
   );
 
   return (
@@ -255,7 +279,11 @@ export default function WidgetCustomization() {
                 ) : (
                   <>
                     Your {plan.name} plan includes {can("accentColor") ? "the accent colour and presets" : "the standard look"}.{" "}
-                    <Link className="bb-link" to="/app/billing">
+                    <Link
+                      className="bb-link"
+                      to={{ pathname: "/app/billing", search: location.search }}
+                      onClick={handleUpgradeClick}
+                    >
                       Upgrade for full styling
                     </Link>
                   </>
@@ -290,6 +318,7 @@ export default function WidgetCustomization() {
               </div>
               <div className="bb-colorgrid">
                 <ColorField
+                  key={`accent-${activePreset?.name ?? "custom"}`}
                   label="Accent"
                   value={settings.accentColor}
                   error={errors.accentColor}
@@ -298,6 +327,7 @@ export default function WidgetCustomization() {
                   onChange={(v) => set("accentColor", v)}
                 />
                 <ColorField
+                  key={`text-${activePreset?.name ?? "custom"}`}
                   label="Text"
                   value={settings.textColor}
                   error={errors.textColor}
@@ -306,6 +336,7 @@ export default function WidgetCustomization() {
                   onChange={(v) => set("textColor", v)}
                 />
                 <ColorField
+                  key={`bg-${activePreset?.name ?? "custom"}`}
                   label="Background"
                   value={settings.backgroundColor}
                   error={errors.backgroundColor}
@@ -377,12 +408,51 @@ export default function WidgetCustomization() {
             >
               <div className={`bb-device bb-device--${device}`}>
                 <div className="bb-mockpdp">
-                  <div className="bb-mockpdp__image" aria-hidden="true" />
-                  <div className="bb-mockpdp__title">Sample product</div>
+                  <div className="bb-mockpdp__image" aria-hidden="true">
+                    {previewCampaign?.productImageUrl ? (
+                      <img
+                        src={previewCampaign.productImageUrl}
+                        alt={previewCampaign.productTitle ?? "Product"}
+                        className="bb-mockpdp__img"
+                      />
+                    ) : (
+                      <div className="bb-mockpdp__tshirt">
+                        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="bb-tshirt-svg">
+                          <path
+                            d="M32 20C35 27 42 31 50 31C58 31 65 27 68 20L86 30L76 50L68 45V82H32V45L24 50L14 30L32 20Z"
+                            fill="#5B47E0"
+                            fillOpacity="0.15"
+                            stroke="#5B47E0"
+                            strokeWidth="2.5"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M40 20C42 24 46 26 50 26C54 26 58 24 60 20"
+                            stroke="#5B47E0"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                          />
+                          <path
+                            d="M24 50L32 45"
+                            stroke="#5B47E0"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                          />
+                          <path
+                            d="M76 50L68 45"
+                            stroke="#5B47E0"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <div className="bb-mockpdp__title">{previewCampaign?.productTitle ?? "BundleBoost Classic T-Shirt"}</div>
                   <div className="bb-mockpdp__price">{new Intl.NumberFormat("en-US", { style: "currency", currency: currencyCode ?? "USD" }).format(24)}</div>
                   {parsed.success ? (
                     <WidgetPreview
-                      settings={applyWidgetPlan(parsed.data, plan)}
+                      settings={parsed.data}
                       tiers={tiers}
                       type={previewCampaign?.type ?? "percentage"}
                       currencyCode={currencyCode}

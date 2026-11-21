@@ -1,18 +1,24 @@
 import prisma from "../../db.server";
-import { planFromHandle, PLAN_ORDER, type Plan, type PlanHandle } from "../../lib/plans";
+import { planFromHandle, PLAN_ORDER, PLANS, type Plan, type PlanHandle } from "../../lib/plans";
 import { env } from "../env";
 import { logger } from "../logger";
 import type { AdminGraphqlClient } from "../shopify/graphql";
-import { fetchActiveSubscription, partnerApiConfigured } from "../shopify/partner";
+import {
+  fetchActiveSubscription as fetchAdminSubscription,
+  cancelSubscription as cancelAdminSubscription,
+} from "../shopify/billing";
+import {
+  fetchActiveSubscription as fetchPartnerSubscription,
+  partnerApiConfigured,
+} from "../shopify/partner";
 
 /**
- * Billing runs on Shopify App Pricing: plans live in the Partner Dashboard,
- * merchants choose on Shopify's hosted plan page, and Shopify creates the
- * charge. BundleBoost never creates charges or sees payment details.
+ * Billing supports native Shopify App Billing via the Admin API
+ * (appSubscriptionCreate / currentAppInstallation.activeSubscriptions), with
+ * optional fallback to Shopify Partner API managed pricing if configured.
  *
- * The merchant's plan is read from the Partner API and cached on
- * BillingSubscription for a few minutes (Shopify's guidance, given the
- * Partner API's 4 requests/second limit). No subscription means Free.
+ * The merchant's plan is read from Shopify and cached on BillingSubscription
+ * for a few minutes. No active subscription means Free.
  */
 
 const CACHE_MS = 5 * 60 * 1000;
@@ -46,12 +52,11 @@ export async function getShopPlan(
   admin: AdminGraphqlClient,
   options: { fresh?: boolean } = {},
 ): Promise<ShopPlan> {
-  const configured = partnerApiConfigured();
   const row = await prisma.billingSubscription.findUnique({ where: { shopId } });
   const cached = (): ShopPlan => ({
     plan: planFromHandle(row?.status === "ACTIVE" ? row.planName : "free"),
     verified: false,
-    configured,
+    configured: true,
     renewsAt: row?.currentPeriodEnd?.toISOString() ?? null,
     trialEndsAt: null,
     cancelAtEndOfCycle: false,
@@ -59,18 +64,86 @@ export async function getShopPlan(
     checkedAt: row?.lastCheckedAt?.toISOString() ?? null,
   });
 
-  if (!configured) return cached();
-  const fresh = row?.lastCheckedAt && Date.now() - row.lastCheckedAt.getTime() < CACHE_MS;
+  // Only trust the cache if the store is already on an ACTIVE paid plan.
+  // If the store is on Free (or has no active subscription cached), always check
+  // Shopify so newly approved charges take effect immediately across all screens.
+  const isPayingPlan = row?.status === "ACTIVE" && Boolean(row.planName) && row.planName !== "free";
+  const fresh = isPayingPlan && row?.lastCheckedAt && Date.now() - row.lastCheckedAt.getTime() < CACHE_MS;
   if (fresh && !options.fresh) return { ...cached(), verified: true };
 
   try {
-    const subscription = await fetchActiveSubscription(admin);
-    const handle = handleOf(subscription?.items) ?? "free";
-    const renewsAt = subscription?.currentBillingCycle?.endTime ?? null;
+    // 1. Primary check: Shopify Admin API (native App Billing API)
+    const subscription = await fetchAdminSubscription(admin);
+    if (subscription && subscription.status === "ACTIVE") {
+      const plan = planFromHandle(subscription.name);
+      const renewsAt = subscription.currentPeriodEnd ?? null;
+      const data = {
+        planName: plan.handle,
+        status: "ACTIVE",
+        shopifySubscriptionId: subscription.id,
+        test: subscription.test,
+        trialDays: subscription.trialDays,
+        currentPeriodEnd: renewsAt ? new Date(renewsAt) : null,
+        lastCheckedAt: new Date(),
+      };
+      await prisma.billingSubscription.upsert({
+        where: { shopId },
+        create: { shopId, ...data },
+        update: data,
+      });
+      return {
+        plan,
+        verified: true,
+        configured: true,
+        renewsAt,
+        trialEndsAt: null,
+        cancelAtEndOfCycle: false,
+        pendingPlan: null,
+        checkedAt: data.lastCheckedAt.toISOString(),
+      };
+    }
+
+    // 2. Fallback check: Partner API if configured (e.g. for managed pricing in Partner Dashboard)
+    if (partnerApiConfigured()) {
+      try {
+        const partnerSub = await fetchPartnerSubscription(admin);
+        if (partnerSub) {
+          const handle = handleOf(partnerSub.items) ?? "free";
+          const renewsAt = partnerSub.currentBillingCycle?.endTime ?? null;
+          const data = {
+            planName: handle,
+            status: "ACTIVE",
+            currentPeriodEnd: renewsAt ? new Date(renewsAt) : null,
+            lastCheckedAt: new Date(),
+          };
+          await prisma.billingSubscription.upsert({
+            where: { shopId },
+            create: { shopId, ...data },
+            update: data,
+          });
+          const pending = handleOf(partnerSub.pendingUpdate?.items);
+          return {
+            plan: planFromHandle(handle),
+            verified: true,
+            configured: true,
+            renewsAt,
+            trialEndsAt: partnerSub.trialEndsAt ?? null,
+            cancelAtEndOfCycle: partnerSub.cancelAtEndOfCycle ?? false,
+            pendingPlan: pending ? planFromHandle(pending) : null,
+            checkedAt: data.lastCheckedAt.toISOString(),
+          };
+        }
+      } catch (partnerError) {
+        logger.warn("Partner API plan check failed; falling back to Admin API status", { error: partnerError });
+      }
+    }
+
+    // No active subscription -> store is on Free plan
     const data = {
-      planName: handle,
-      status: subscription ? "ACTIVE" : "NONE",
-      currentPeriodEnd: renewsAt ? new Date(renewsAt) : null,
+      planName: "free",
+      status: "NONE",
+      shopifySubscriptionId: null,
+      currentPeriodEnd: null,
       lastCheckedAt: new Date(),
     };
     await prisma.billingSubscription.upsert({
@@ -78,15 +151,14 @@ export async function getShopPlan(
       create: { shopId, ...data },
       update: data,
     });
-    const pending = handleOf(subscription?.pendingUpdate?.items);
     return {
-      plan: planFromHandle(handle),
+      plan: PLANS.free,
       verified: true,
-      configured,
-      renewsAt,
-      trialEndsAt: subscription?.trialEndsAt ?? null,
-      cancelAtEndOfCycle: subscription?.cancelAtEndOfCycle ?? false,
-      pendingPlan: pending ? planFromHandle(pending) : null,
+      configured: true,
+      renewsAt: null,
+      trialEndsAt: null,
+      cancelAtEndOfCycle: false,
+      pendingPlan: null,
       checkedAt: data.lastCheckedAt.toISOString(),
     };
   } catch (error) {
@@ -94,6 +166,61 @@ export async function getShopPlan(
     logger.warn("Plan check failed; using last known plan", { shopId, error });
     return cached();
   }
+}
+
+/** Cancel any active subscription and set shop to Free. */
+export async function cancelCurrentSubscription(
+  shopId: string,
+  admin: AdminGraphqlClient,
+  billing?: { cancel?: (opts: { subscriptionId: string; isTest?: boolean; prorate?: boolean }) => Promise<unknown> },
+) {
+  const row = await prisma.billingSubscription.findUnique({ where: { shopId } });
+  let subscriptionId = row?.shopifySubscriptionId;
+
+  if (!subscriptionId) {
+    const active = await fetchAdminSubscription(admin);
+    subscriptionId = active?.id ?? null;
+  }
+
+  if (subscriptionId) {
+    let cancelled = false;
+    if (billing?.cancel) {
+      try {
+        await billing.cancel({
+          subscriptionId,
+          isTest: process.env.NODE_ENV !== "production",
+          prorate: true,
+        });
+        cancelled = true;
+      } catch (e) {
+        logger.warn("billing.cancel failed, trying admin GraphQL mutation", { error: e });
+      }
+    }
+    if (!cancelled) {
+      try {
+        await cancelAdminSubscription(admin, subscriptionId);
+      } catch (e) {
+        logger.warn("cancelAdminSubscription failed", { error: e });
+      }
+    }
+  }
+
+  await prisma.billingSubscription.upsert({
+    where: { shopId },
+    create: {
+      shopId,
+      planName: "free",
+      status: "CANCELLED",
+      shopifySubscriptionId: null,
+      lastCheckedAt: new Date(),
+    },
+    update: {
+      planName: "free",
+      status: "CANCELLED",
+      shopifySubscriptionId: null,
+      lastCheckedAt: new Date(),
+    },
+  });
 }
 
 /** What the shop uses today, compared with plan limits on the billing page. */

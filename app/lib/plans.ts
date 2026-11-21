@@ -93,6 +93,12 @@ export const PLANS: Record<PlanHandle, Plan> = {
   },
 };
 
+export const PLAN_NAMES: Record<PlanHandle, string> = {
+  free: "Free",
+  growth: "Growth",
+  pro: "Pro",
+};
+
 export const PLAN_ORDER: PlanHandle[] = ["free", "growth", "pro"];
 
 export const PLAN_FOOTNOTES = [
@@ -101,7 +107,12 @@ export const PLAN_FOOTNOTES = [
 ];
 
 export function planFromHandle(handle: string | null | undefined): Plan {
-  return PLANS[(handle ?? "") as PlanHandle] ?? PLANS.free;
+  if (!handle) return PLANS.free;
+  const normalized = handle.toLowerCase().trim();
+  if (normalized === "growth") return PLANS.growth;
+  if (normalized === "pro") return PLANS.pro;
+  if (normalized === "free") return PLANS.free;
+  return PLANS[handle as PlanHandle] ?? PLANS.free;
 }
 
 /** The smallest plan that allows a value, for "Upgrade to …" prompts. */

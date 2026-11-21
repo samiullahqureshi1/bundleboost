@@ -1,4 +1,5 @@
 import {
+  Link,
   Outlet,
   useLoaderData,
   useRouteError,
@@ -8,6 +9,7 @@ import {
 } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
+import { NavMenu } from "@shopify/app-bridge-react";
 import { requireAdmin } from "../.server/context";
 import { env } from "../.server/env";
 import styles from "../styles/bundleboost.css?url";
@@ -26,16 +28,16 @@ export default function App() {
 
   return (
     <AppProvider embedded apiKey={apiKey}>
-      <s-app-nav>
-        <s-link href="/app">
+      <NavMenu>
+        <Link to="/app" rel="home">
           Overview
-        </s-link>
-        <s-link href="/app/campaigns">Campaigns</s-link>
-        <s-link href="/app/widget">Widget</s-link>
-        <s-link href="/app/analytics">Analytics</s-link>
-        <s-link href="/app/billing">Billing</s-link>
-        <s-link href="/app/settings">Settings</s-link>
-      </s-app-nav>
+        </Link>
+        <Link to="/app/campaigns">Campaigns</Link>
+        <Link to="/app/widget">Widget</Link>
+        <Link to="/app/analytics">Analytics</Link>
+        <Link to="/app/billing">Billing</Link>
+        <Link to="/app/settings">Settings</Link>
+      </NavMenu>
       <Outlet />
     </AppProvider>
   );

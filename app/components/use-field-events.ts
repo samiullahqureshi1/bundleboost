@@ -7,6 +7,7 @@ import { useEffect, useRef } from "react";
  */
 export function useFieldEvents<T extends HTMLElement>(
   onValue: (element: T) => void,
+  controlledValue?: string | number | boolean,
 ) {
   const ref = useRef<T>(null);
   const handler = useRef(onValue);
@@ -23,6 +24,21 @@ export function useFieldEvents<T extends HTMLElement>(
       element.removeEventListener("change", listener);
     };
   }, []);
+
+  useEffect(() => {
+    const element = ref.current as (HTMLElement & { value?: string; checked?: boolean }) | null;
+    if (!element) return;
+    if (typeof controlledValue === "boolean") {
+      if (element.checked !== controlledValue) {
+        element.checked = controlledValue;
+      }
+    } else if (controlledValue !== undefined) {
+      if (element.value !== String(controlledValue)) {
+        element.value = String(controlledValue);
+        element.setAttribute("value", String(controlledValue));
+      }
+    }
+  }, [controlledValue]);
 
   return ref;
 }

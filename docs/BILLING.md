@@ -1,22 +1,24 @@
-# Billing — Shopify App Pricing
+# Billing — Shopify App Billing
 
-BundleBoost uses **Shopify App Pricing**, Shopify's recommended billing for new public apps:
+BundleBoost uses Shopify's native **App Billing API** (`appSubscriptionCreate`, `billing.request` from `@shopify/shopify-app-react-router`), with support for test charges in development and fallback support for Partner Dashboard managed pricing:
 
-- Plans are defined in the **Partner Dashboard**, not in code.
-- Merchants choose a plan on Shopify's **hosted plan selection page**.
-- Shopify creates and bills the subscription. The app never calls `appSubscriptionCreate` and never sees payment details.
+- Plans are configured in `app/shopify.server.ts` (`billingConfig`).
+- Merchants choose a plan directly in the app on `/app/billing`.
+- Shopify presents the native subscription confirmation screen to approve or decline the charge.
+- In development / non-production, test charges are used (`isTest: true`) so development stores can test plans at no charge.
+- Shopify creates and bills the subscription. BundleBoost never stores payment details.
 
 ## Plans
 
 | Handle | Name | Price | Active campaigns | Live products | Tiers / campaign | Widget |
 | --- | --- | --- | --- | --- | --- | --- |
 | `free` | Free | $0 | 1 | 5 | 3 | Basic: heading only |
-| `growth` | Growth | $7.99 / month | 10 | 100 | 10 | Customizable: + layout, accent colour, presets, savings and best-deal switches |
-| `pro` | Pro | $14.99 / month | 25\* | Unlimited\* | 20 | Full: + text colour, background colour, corner radius |
+| `growth` | Growth | $7.99 / 30 days | 10 | 100 | 10 | Customizable: + layout, accent colour, presets, savings and best-deal switches |
+| `pro` | Pro | $14.99 / 30 days | 25\* | Unlimited\* | 20 | Full: + text colour, background colour, corner radius |
 
 \* 25 is Shopify's limit of active discount functions per store, shared with other discount apps. "Unlimited" means no plan limit on products across campaigns; each campaign can still target at most 100 products, a technical limit.
 
-Entitlements live in `app/lib/plans.ts`. The plan **handles** there must match the handles you create in the Partner Dashboard exactly.
+Entitlements live in `app/lib/plans.ts`.
 
 ## How enforcement works (server-side)
 
@@ -34,36 +36,15 @@ A downgrade never deletes or pauses anything. Campaigns above the new limits kee
 
 `getShopPlan` in `app/.server/services/billing.service.ts`:
 
-1. Runs the Partner API `activeSubscription(appId, shopId)` query (validated against 2026-10). The plan is `items[].handle`.
-2. No subscription means **Free**.
-3. The result is cached on `BillingSubscription` for 5 minutes. The Partner API allows 4 requests per second.
-4. If the Partner API call fails, the **last known plan** is kept, so a paying merchant is never downgraded by an outage.
-5. The Billing page always re-checks. Shopify's `?plan_handle=` redirect parameter is never trusted on its own.
+1. Queries the Admin API `currentAppInstallation.activeSubscriptions` through the authenticated session.
+2. If Partner API credentials are configured, it also checks the Partner API as fallback.
+3. No active subscription means **Free**.
+4. The result is cached on `BillingSubscription` for 5 minutes.
+5. If the Shopify API call fails, the **last known plan** is kept, so a paying merchant is never downgraded by an outage.
+6. The Billing page always re-checks on load (`{ fresh: true }`).
 
-## Setup checklist (you do this in the Partner Dashboard)
+## Upgrading, Downgrading, and Cancelling
 
-1. **Partner Dashboard → Apps → BundleBoost → Distribution → Manage listing → Pricing content → Manage.** Choose Shopify App Pricing.
-2. Create three **public plans** with these exact handles and prices:
-   - `free` — $0
-   - `growth` — $7.99 every 30 days
-   - `pro` — $14.99 every 30 days
-
-   Add the display names and feature lists from the table above.
-3. Set each plan's **welcome link** to `/app/billing`. Shopify appends `plan_handle`, and the page re-checks the plan.
-4. **Partner Dashboard → Settings → Partner API clients:** create a client that can view apps and subscriptions. Copy its access token.
-5. Set the environment variables (local `.env` and production):
-
-   ```bash
-   SHOPIFY_APP_HANDLE=<the app handle in your plan page URL>
-   SHOPIFY_PARTNER_ORG_ID=194174159
-   SHOPIFY_PARTNER_API_ACCESS_TOKEN=<token from step 4>   # secret
-   SHOPIFY_APP_GID=gid://shopify/App/437060665345
-   ```
-
-6. Restart `shopify app dev`. On the development store, pick each plan. Dev stores in your organization can test paid plans at no charge. Confirm that the Billing page shows the right plan and limits.
-
-Until steps 4–5 are done, every shop is treated as **Free**, and the Billing page says paid plans aren't available yet.
-
-## Not verified yet
-
-The Partner API call and the hosted plan page haven't been exercised end to end, because the plans and token don't exist yet. The plan logic, limits and fallbacks are covered by `tests/unit/plans.test.ts` and `tests/integration/plan-limits.test.ts`.
+1. **Upgrade / Switch to paid plan**: On `/app/billing`, clicking "Upgrade to Growth" or "Upgrade to Pro" submits a form to `/app/billing` (POST), which triggers `billing.request({ plan, isTest, returnUrl })`. The merchant is redirected out to Shopify to approve the recurring charge. Once approved, Shopify redirects back to `/app/billing`, where the plan is refreshed and active.
+2. **Downgrade to Free**: Clicking "Switch to Free" posts to `/app/billing` (`plan: "free"`), which calls `cancelCurrentSubscription`, cancels the subscription on Shopify, and sets the local plan to Free.
+3. **Webhooks**: When a subscription is modified or cancelled in Shopify Admin, Shopify dispatches `app_subscriptions/update` to `/webhooks/app_subscriptions/update`, which marks the local cache stale so the next request updates state.

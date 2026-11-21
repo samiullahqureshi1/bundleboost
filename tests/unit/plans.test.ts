@@ -8,8 +8,11 @@ describe("plans", () => {
     expect(PLANS.pro).toMatchObject({ price: 14.99, activeCampaigns: 25, liveProducts: null, tiersPerCampaign: 20 });
   });
 
-  it("treats unknown or missing handles as Free", () => {
+  it("treats unknown or missing handles as Free and handles case insensitivity", () => {
     expect(planFromHandle("growth").name).toBe("Growth");
+    expect(planFromHandle("Growth").handle).toBe("growth");
+    expect(planFromHandle("pro").name).toBe("Pro");
+    expect(planFromHandle("Pro").handle).toBe("pro");
     expect(planFromHandle("enterprise").handle).toBe("free");
     expect(planFromHandle(null).handle).toBe("free");
   });

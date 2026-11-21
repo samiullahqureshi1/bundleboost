@@ -23,7 +23,10 @@ export function TextField(
     maxLength?: number;
   },
 ) {
-  const ref = useFieldEvents<HTMLElementTagNameMap["s-text-field"]>((el) => props.onChange(readValue(el)));
+  const ref = useFieldEvents<HTMLElementTagNameMap["s-text-field"]>(
+    (el) => props.onChange(readValue(el)),
+    props.value,
+  );
   return (
     <s-text-field
       ref={ref}
@@ -51,7 +54,10 @@ export function NumberField(
     suffix?: string;
   },
 ) {
-  const ref = useFieldEvents<HTMLElementTagNameMap["s-number-field"]>((el) => props.onChange(readValue(el)));
+  const ref = useFieldEvents<HTMLElementTagNameMap["s-number-field"]>(
+    (el) => props.onChange(readValue(el)),
+    props.value,
+  );
   return (
     <s-number-field
       ref={ref}
@@ -78,7 +84,10 @@ export function SelectField(
     options: { value: string; label: string }[];
   },
 ) {
-  const ref = useFieldEvents<HTMLElementTagNameMap["s-select"]>((el) => props.onChange(readValue(el)));
+  const ref = useFieldEvents<HTMLElementTagNameMap["s-select"]>(
+    (el) => props.onChange(readValue(el)),
+    props.value,
+  );
   return (
     <s-select
       ref={ref}
@@ -101,7 +110,10 @@ export function SelectField(
 export function ColorField(
   props: BaseProps & { value: string; onChange: (value: string) => void },
 ) {
-  const ref = useFieldEvents<HTMLElementTagNameMap["s-color-field"]>((el) => props.onChange(readValue(el)));
+  const ref = useFieldEvents<HTMLElementTagNameMap["s-color-field"]>(
+    (el) => props.onChange(readValue(el)),
+    props.value,
+  );
   return (
     <s-color-field
       ref={ref}
@@ -121,8 +133,9 @@ export function Checkbox(
     onChange: (checked: boolean) => void;
   },
 ) {
-  const ref = useFieldEvents<HTMLElementTagNameMap["s-checkbox"]>((el) =>
-    props.onChange(readChecked(el)),
+  const ref = useFieldEvents<HTMLElementTagNameMap["s-checkbox"]>(
+    (el) => props.onChange(readChecked(el)),
+    props.checked,
   );
   return (
     <s-checkbox
