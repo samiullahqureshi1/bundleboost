@@ -1,0 +1,22 @@
+api_version = "2026-10"
+
+[[extensions]]
+name = "t:name"
+description = "t:description"
+handle = "bundleboost-quantity-breaks"
+uid = "376e7bd6-8607-ebcc-83a1-459b6ad1aad9a74bc416"
+type = "function"
+
+  [[extensions.targeting]]
+  target = "cart.lines.discounts.generate.run"
+  input_query = "src/cart_lines_discounts_generate_run.graphql"
+  export = "cart-lines-discounts-generate-run"
+
+  [extensions.build]
+  command = ""
+  path = "dist/function.wasm"
+
+  # Shopify's Discounts page links back to the campaign editor in the app.
+  [extensions.ui.paths]
+  create = "/app/campaigns/new"
+  details = "/app/campaigns/discount/:id"

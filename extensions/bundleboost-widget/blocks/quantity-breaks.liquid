@@ -1,0 +1,107 @@
+{%- liquid
+  assign config = app.metafields.bundleboost.storefront.value
+  assign product_key = product.id | append: ''
+  assign offers = config.products[product_key]
+  assign widget = config.widget
+  assign current_variant = product.selected_or_first_available_variant
+  assign same_currency = false
+  if config.currency == cart.currency.iso_code
+    assign same_currency = true
+  endif
+-%}
+
+{%- if product and offers and offers.size > 0 -%}
+  <div
+    class="bb-breaks bb-breaks--{{ widget.layout | default: 'stacked' | escape }}"
+    style="--bb-accent: {{ widget.accent_color | default: '#008060' | escape }}; --bb-text: {{ widget.text_color | default: '#202223' | escape }}; --bb-bg: {{ widget.background_color | default: '#FFFFFF' | escape }}; --bb-radius: {{ widget.border_radius | default: 8 }}px;"
+    data-bb-breaks
+    data-same-currency="{{ same_currency }}"
+    {{ block.shopify_attributes }}
+  >
+    <script type="application/json" data-bb-variant-prices>
+      { {%- for variant in product.variants -%}"{{ variant.id }}": {{ variant.price }}{%- unless forloop.last -%},{%- endunless -%}{%- endfor -%} }
+    </script>
+
+    <p class="bb-breaks__heading">{{ widget.heading | escape }}</p>
+
+    {%- for offer in offers -%}
+      {%- liquid
+        assign variant_list = offer.variants | join: ','
+        assign applies = true
+        if offer.variants.size > 0
+          assign current_id = current_variant.id | append: ''
+          unless offer.variants contains current_id
+            assign applies = false
+          endunless
+        endif
+        assign best_qty = offer.tiers.last.qty
+      -%}
+      <div
+        class="bb-breaks__offer"
+        data-bb-offer
+        data-type="{{ offer.type | escape }}"
+        data-variants="{{ variant_list | escape }}"
+        {% unless applies %}hidden{% endunless %}
+      >
+        <ul class="bb-breaks__tiers" role="list">
+          {%- for tier in offer.tiers -%}
+            {%- liquid
+              if offer.type == 'percentage'
+                assign keep = 100 | minus: tier.value
+                assign tier_price = current_variant.price | times: keep | divided_by: 100 | round
+              elsif same_currency
+                assign off_cents = tier.value | times: 100 | round
+                assign tier_price = current_variant.price | minus: off_cents | at_least: 0
+              endif
+            -%}
+            <li>
+              <button
+                type="button"
+                class="bb-breaks__tier{% if widget.highlight_best_deal and tier.qty == best_qty %} bb-breaks__tier--best{% endif %}"
+                data-bb-tier
+                data-qty="{{ tier.qty }}"
+                data-value="{{ tier.value }}"
+              >
+                {%- if widget.highlight_best_deal and tier.qty == best_qty -%}
+                  <span class="bb-breaks__badge">{{ 'quantity_breaks.best_deal' | t }}</span>
+                {%- endif -%}
+                <span class="bb-breaks__qty">
+                  {{ 'quantity_breaks.buy_quantity' | t: quantity: tier.qty }}
+                  {%- if tier.label != blank %} · {{ tier.label | escape }}{% endif -%}
+                </span>
+                {%- if offer.type == 'percentage' or same_currency -%}
+                  <span class="bb-breaks__price">
+                    <span data-bb-amount>{{ tier_price | money }}</span>
+                    {{ 'quantity_breaks.each' | t }}
+                  </span>
+                {%- endif -%}
+                {%- if widget.show_savings -%}
+                  <span class="bb-breaks__save">
+                    {%- if offer.type == 'percentage' -%}
+                      {{ 'quantity_breaks.save_percent' | t: percent: tier.value }}
+                    {%- elsif same_currency -%}
+                      {{ 'quantity_breaks.save_amount_each' | t: amount: off_cents | money }}
+                    {%- endif -%}
+                  </span>
+                {%- endif -%}
+              </button>
+            </li>
+          {%- endfor -%}
+        </ul>
+      </div>
+    {%- endfor -%}
+  </div>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "t:blocks.quantity_breaks.name",
+  "target": "section",
+  "enabled_on": {
+    "templates": ["product"]
+  },
+  "stylesheet": "quantity-breaks.css",
+  "javascript": "quantity-breaks.js",
+  "settings": []
+}
+{% endschema %}

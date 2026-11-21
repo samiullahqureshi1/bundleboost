@@ -1,0 +1,9 @@
+{
+  "quantity_breaks": {
+    "best_deal": "Best deal",
+    "buy_quantity": "Buy {{ quantity }}+",
+    "each": "each",
+    "save_percent": "Save {{ percent }}%",
+    "save_amount_each": "Save {{ amount }} each"
+  }
+}

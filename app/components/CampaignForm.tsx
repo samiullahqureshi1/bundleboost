@@ -1,0 +1,289 @@
+import { useEffect, useState, type ReactNode } from "react";
+import { Link, useFetcher } from "react-router";
+import { SaveBar, useAppBridge } from "@shopify/app-bridge-react";
+import {
+  CAMPAIGN_LIMITS,
+  validateCampaignInput,
+  type DiscountTypeValue,
+} from "../lib/campaign-validation";
+import { EditorCard } from "./EditorCard";
+import { TextField } from "./Fields";
+import { QuantityPreview } from "./home/QuantityPreview";
+import { ProductTargets, type SelectedProduct } from "./ProductTargets";
+import { TierEditor, type TierDraft } from "./TierEditor";
+
+export type CampaignFormState = {
+  name: string;
+  discountType: DiscountTypeValue;
+  discountLabel: string;
+  products: SelectedProduct[];
+  tiers: TierDraft[];
+};
+
+export const EMPTY_CAMPAIGN: CampaignFormState = {
+  name: "",
+  discountType: "PERCENTAGE",
+  discountLabel: "",
+  products: [],
+  tiers: [
+    { minQuantity: "2", value: "5", label: "" },
+    { minQuantity: "3", value: "10", label: "" },
+  ],
+};
+
+type ActionResult =
+  | { ok: true; message?: string }
+  | { ok: false; message: string; fieldErrors?: Record<string, string> };
+
+export function toPayload(state: CampaignFormState) {
+  return {
+    name: state.name,
+    discountType: state.discountType,
+    discountLabel: state.discountLabel,
+    products: state.products.map((p) => ({
+      productGid: p.productGid,
+      variantGids: p.variantGids,
+    })),
+    tiers: state.tiers.map((t) => ({
+      minQuantity: t.minQuantity,
+      value: t.value,
+      label: t.label,
+    })),
+  };
+}
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+/**
+ * Campaign editor (create and edit): numbered cards on the left, status and a
+ * live preview on the right, and Shopify's save bar whenever there are unsaved
+ * changes. Validates on the client for fast feedback; the route action
+ * re-validates and verifies products with Shopify.
+ */
+export function CampaignForm({
+  mode,
+  initial,
+  currencyCode,
+  defaultLabel,
+  readOnly,
+  head,
+  banners,
+  statusCard,
+  footer,
+  maxTiers,
+  planName,
+}: {
+  mode: "create" | "edit";
+  initial: CampaignFormState;
+  currencyCode: string | null;
+  defaultLabel: string;
+  readOnly?: boolean;
+  /** Extra line under the title (status, last update). */
+  head?: ReactNode;
+  banners?: ReactNode;
+  statusCard?: ReactNode;
+  footer?: ReactNode;
+  /** Tier allowance of the shop's plan, and the plan's name for the prompt. */
+  maxTiers?: number;
+  planName?: string;
+}) {
+  const fetcher = useFetcher<ActionResult>();
+  const shopify = useAppBridge();
+  const [state, setState] = useState(initial);
+  const [baseline, setBaseline] = useState(initial);
+  const [clientErrors, setClientErrors] = useState<Record<string, string>>({});
+  const saving = fetcher.state !== "idle";
+  const dirty = JSON.stringify(state) !== JSON.stringify(baseline);
+
+  const serverResult = fetcher.data;
+  const serverErrors = serverResult && !serverResult.ok ? serverResult.fieldErrors ?? {} : {};
+  const errors = { ...serverErrors, ...clientErrors };
+  const issueCount = Object.keys(errors).length;
+
+  useEffect(() => {
+    if (fetcher.state !== "idle" || !serverResult) return;
+    if (serverResult.ok) {
+      setBaseline(state);
+      shopify.toast.show(serverResult.message ?? "Campaign saved");
+    } else if (!serverResult.fieldErrors) {
+      shopify.toast.show(serverResult.message, { isError: true });
+    }
+    // Only react to a finished submission, not to edits made afterwards.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetcher.state, serverResult, shopify]);
+
+  const set = <K extends keyof CampaignFormState>(key: K, value: CampaignFormState[K]) => {
+    setState((s) => ({ ...s, [key]: value }));
+    setClientErrors({});
+  };
+
+  function submit() {
+    const payload = toPayload(state);
+    const result = validateCampaignInput(payload);
+    if (!result.success) {
+      setClientErrors(result.fieldErrors);
+      shopify.toast.show("Fix the highlighted fields", { isError: true });
+      return;
+    }
+    fetcher.submit({ intent: "save", campaign: payload }, { method: "post", encType: "application/json" });
+  }
+
+  function discard() {
+    setState(baseline);
+    setClientErrors({});
+  }
+
+  const productItemErrors: Record<number, string> = {};
+  for (const [key, message] of Object.entries(errors)) {
+    const match = /^products\.(\d+)/.exec(key);
+    if (match) productItemErrors[Number(match[1])] = message;
+  }
+
+  const previewTiers = state.tiers
+    .filter((t) => Number(t.minQuantity) >= 2 && Number(t.value) > 0)
+    .map((t) => ({ minQuantity: Number(t.minQuantity), value: t.value, label: t.label || null }))
+    .sort((a, b) => a.minQuantity - b.minQuantity);
+  const title = state.name.trim() || (mode === "create" ? "New campaign" : "Untitled campaign");
+
+  return (
+    <>
+      <SaveBar id="campaign-save-bar" open={dirty && !readOnly}>
+        <button variant="primary" onClick={submit} {...(saving ? { loading: "" } : {})}>
+          {mode === "create" ? "Save draft" : "Save"}
+        </button>
+        <button onClick={discard} disabled={saving}>
+          Discard
+        </button>
+      </SaveBar>
+
+      <div className="bb-wrap">
+        <header className="bb-edithead">
+          <h1 className="bb-heading">{title}</h1>
+          {head && <div className="bb-edithead__meta">{head}</div>}
+        </header>
+
+        {issueCount > 0 && (
+          <s-banner tone="critical" heading={`Fix ${plural(issueCount, "issue")} before saving`}>
+            {serverResult && !serverResult.ok ? serverResult.message : "Check the highlighted fields below."}
+          </s-banner>
+        )}
+        {banners}
+
+        <div className="bb-editor">
+          <div className="bb-stack">
+            <EditorCard num="01" title="Details">
+              <div className="bb-fields">
+                <TextField
+                  label="Campaign name"
+                  details="Only you see this name."
+                  value={state.name}
+                  placeholder="e.g. Socks — buy more, save more"
+                  maxLength={CAMPAIGN_LIMITS.nameMax}
+                  error={errors.name}
+                  disabled={readOnly}
+                  onChange={(v) => set("name", v)}
+                />
+                <div>
+                  <span className="bb-fieldlabel" id="discount-type-label">
+                    Discount type
+                  </span>
+                  <fieldset className="bb-segment" aria-labelledby="discount-type-label">
+                    {(
+                      [
+                        ["PERCENTAGE", "Percentage off"],
+                        ["FIXED_AMOUNT", "Amount off each item"],
+                      ] as const
+                    ).map(([value, label]) => (
+                      <label key={value}>
+                        <input
+                          type="radio"
+                          name="discountType"
+                          value={value}
+                          checked={state.discountType === value}
+                          disabled={readOnly}
+                          onChange={() => set("discountType", value)}
+                        />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </fieldset>
+                </div>
+                <TextField
+                  label="Discount label (optional)"
+                  details={`Shown to customers in the cart and at checkout. Defaults to "${defaultLabel}".`}
+                  value={state.discountLabel}
+                  placeholder={defaultLabel}
+                  maxLength={CAMPAIGN_LIMITS.labelMax}
+                  error={errors.discountLabel}
+                  disabled={readOnly}
+                  onChange={(v) => set("discountLabel", v)}
+                />
+              </div>
+            </EditorCard>
+
+            <ProductTargets
+              num="02"
+              value={state.products}
+              onChange={(v) => set("products", v)}
+              error={errors.products}
+              itemErrors={productItemErrors}
+              disabled={readOnly}
+            />
+
+            <TierEditor
+              num="03"
+              tiers={state.tiers}
+              discountType={state.discountType}
+              currencyCode={currencyCode}
+              onChange={(v) => set("tiers", v)}
+              errors={errors}
+              disabled={readOnly}
+              maxTiers={maxTiers}
+              limitNote={
+                planName && (
+                  <span className="bb-limitnote">
+                    {planName} plan limit reached.{" "}
+                    <Link className="bb-link" to="/app/billing">
+                      See plans
+                    </Link>
+                  </span>
+                )
+              }
+            />
+
+            {mode === "create" && (
+              <div className="bb-actions bb-actions--end">
+                <Link className="bb-btn bb-btn--glass" to="/app/campaigns">
+                  Cancel
+                </Link>
+                <button type="button" className="bb-btn bb-btn--dark" onClick={submit} disabled={saving}>
+                  {saving ? "Saving…" : "Save draft"}
+                </button>
+              </div>
+            )}
+            {footer}
+          </div>
+
+          <aside className="bb-stack bb-editor__aside">
+            {statusCard}
+            <EditorCard title="Preview" hint="How the tiers read on a product page. Sample product and price.">
+              {previewTiers.length ? (
+                <QuantityPreview
+                  productName={state.products[0]?.title ?? "Your product"}
+                  campaignName={state.discountLabel.trim() || defaultLabel}
+                  units={["item", "items"]}
+                  tiers={previewTiers}
+                  discountType={state.discountType}
+                  currencyCode={currencyCode}
+                  onAddToCart={() => shopify.toast.show("This is a preview.")}
+                />
+              ) : (
+                <div className="bb-empty bb-placeholder">Add a tier with a quantity and a discount to see it here.</div>
+              )}
+            </EditorCard>
+          </aside>
+        </div>
+      </div>
+    </>
+  );
+}

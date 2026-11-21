@@ -1,0 +1,268 @@
+// BundleBoost database schema.
+// See docs/DATABASE_SCHEMA.md for the rationale behind each model.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Pooled connection used by the app at runtime (Neon: "-pooler" host).
+  url       = env("DATABASE_URL")
+  // Direct connection used by Prisma Migrate, which needs a session that
+  // isn't shared through the connection pooler.
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Shopify OAuth / session persistence.
+// Shape is dictated by @shopify/shopify-app-session-storage-prisma; do not
+// rename fields. Access tokens live only here and must never be logged.
+// ---------------------------------------------------------------------------
+model Session {
+  id                  String    @id
+  shop                String
+  state               String
+  isOnline            Boolean   @default(false)
+  scope               String?
+  expires             DateTime?
+  accessToken         String
+  userId              BigInt?
+  firstName           String?
+  lastName            String?
+  email               String?
+  accountOwner        Boolean   @default(false)
+  locale              String?
+  collaborator        Boolean?  @default(false)
+  emailVerified       Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+
+  @@index([shop])
+}
+
+// ---------------------------------------------------------------------------
+// Tenant root. Every merchant-owned row hangs off Shop.id and is deleted with
+// it (shop/redact). `domain` is the *.myshopify.com domain from the session.
+// ---------------------------------------------------------------------------
+model Shop {
+  id             String    @id @default(cuid())
+  domain         String    @unique
+  name           String?
+  currencyCode   String?
+  installedAt    DateTime  @default(now())
+  uninstalledAt  DateTime?
+  // Last successful write of the storefront widget configuration.
+  storefrontSyncedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  settings       ShopSettings?
+  widgetSettings WidgetSettings?
+  subscription   BillingSubscription?
+  campaigns      Campaign[]
+  auditLogs      AuditLog[]
+}
+
+model ShopSettings {
+  id                    String   @id @default(cuid())
+  shopId                String   @unique
+  shop                  Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  // Default discount label shown to buyers when a campaign has none.
+  defaultDiscountLabel  String   @default("Volume discount")
+  // When true, new campaigns default to combining with other product discounts.
+  combineWithProductDiscounts Boolean @default(false)
+  combineWithOrderDiscounts   Boolean @default(false)
+  combineWithShippingDiscounts Boolean @default(true)
+  // Home page setup guide: hidden once dismissed; the theme-block step can't
+  // be detected without theme access, so the merchant confirms it.
+  setupGuideDismissedAt DateTime?
+  themeBlockConfirmedAt DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Discount campaigns.
+// ---------------------------------------------------------------------------
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+// State of the campaign's Shopify automatic discount relative to the
+// campaign's status in BundleBoost.
+enum SyncStatus {
+  NOT_SYNCED
+  SYNCED
+  ERROR
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+model Campaign {
+  id            String         @id @default(cuid())
+  shopId        String
+  shop          Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name          String
+  status        CampaignStatus @default(DRAFT)
+  discountType  DiscountType
+  // Buyer-facing label rendered in cart/checkout once the Function exists.
+  discountLabel String?
+  startsAt      DateTime?
+  endsAt        DateTime?
+  // Set in Phase 2 when the campaign is synced to a Shopify automatic app
+  // discount (discountAutomaticAppCreate). Null means "not live at checkout".
+  shopifyDiscountId String?
+  lastSyncedAt  DateTime?
+  syncStatus    SyncStatus     @default(NOT_SYNCED)
+  // Last Shopify error, shown to the merchant with a retry action.
+  syncError     String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  archivedAt    DateTime?
+
+  products      CampaignProduct[]
+  tiers         QuantityTier[]
+
+  @@index([shopId, status])
+  @@index([shopId, updatedAt])
+  @@index([shopId, syncStatus])
+}
+
+// Product targeted by a campaign. If `variants` is empty, all variants of the
+// product are eligible; otherwise only the listed variants are.
+model CampaignProduct {
+  id            String   @id @default(cuid())
+  campaignId    String
+  campaign      Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  // Denormalised for tenant-scoped overlap queries without a join to Campaign.
+  shopId        String
+  productGid    String
+  // Snapshot for display; refreshed whenever the merchant re-selects products.
+  title         String
+  handle        String?
+  imageUrl      String?
+  createdAt     DateTime @default(now())
+
+  variants      CampaignVariant[]
+
+  @@unique([campaignId, productGid])
+  @@index([shopId, productGid])
+}
+
+model CampaignVariant {
+  id                String          @id @default(cuid())
+  campaignProductId String
+  campaignProduct   CampaignProduct @relation(fields: [campaignProductId], references: [id], onDelete: Cascade)
+  variantGid        String
+  title             String
+
+  @@unique([campaignProductId, variantGid])
+}
+
+model QuantityTier {
+  id          String   @id @default(cuid())
+  campaignId  String
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  minQuantity Int
+  // Percentage (0–100) or fixed amount per item in the shop currency,
+  // depending on Campaign.discountType.
+  value       Decimal  @db.Decimal(12, 2)
+  label       String?
+  position    Int
+
+  @@unique([campaignId, minQuantity])
+  @@index([campaignId, position])
+}
+
+// ---------------------------------------------------------------------------
+// Storefront widget appearance (theme app extension arrives in Phase 2).
+// ---------------------------------------------------------------------------
+enum WidgetLayout {
+  STACKED
+  GRID
+}
+
+model WidgetSettings {
+  id               String       @id @default(cuid())
+  shopId           String       @unique
+  shop             Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  heading          String       @default("Buy more, save more")
+  layout           WidgetLayout @default(STACKED)
+  accentColor      String       @default("#008060")
+  textColor        String       @default("#202223")
+  backgroundColor  String       @default("#FFFFFF")
+  borderRadius     Int          @default(8)
+  showSavings      Boolean      @default(true)
+  highlightBestDeal Boolean     @default(true)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Billing state mirrored from Shopify. Shopify is the source of truth; this
+// row is a cache refreshed from the Admin API / webhooks.
+// ---------------------------------------------------------------------------
+model BillingSubscription {
+  id                   String    @id @default(cuid())
+  shopId               String    @unique
+  shop                 Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopifySubscriptionId String?
+  planName             String?
+  // Shopify AppSubscriptionStatus (ACTIVE, CANCELLED, FROZEN, ...) or NONE.
+  status               String    @default("NONE")
+  test                 Boolean   @default(false)
+  trialDays            Int?
+  currentPeriodEnd     DateTime?
+  lastCheckedAt        DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Webhook idempotency ledger. Keyed by Shopify's X-Shopify-Webhook-Id so a
+// retried delivery is processed at most once. Deliberately not related to
+// Shop: shop/redact must be able to record itself after the shop is gone.
+// ---------------------------------------------------------------------------
+enum WebhookStatus {
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+model WebhookEvent {
+  id          String        @id @default(cuid())
+  webhookId   String        @unique
+  shopDomain  String
+  topic       String
+  status      WebhookStatus @default(PROCESSING)
+  error       String?
+  receivedAt  DateTime      @default(now())
+  processedAt DateTime?
+
+  @@index([shopDomain, topic])
+}
+
+// ---------------------------------------------------------------------------
+// Merchant-visible audit trail of configuration changes.
+// ---------------------------------------------------------------------------
+model AuditLog {
+  id         String   @id @default(cuid())
+  shopId     String
+  shop       Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  // Staff member who made the change, when known (online session user id).
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([shopId, createdAt])
+}
