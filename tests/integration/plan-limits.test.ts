@@ -132,41 +132,87 @@ describe("plan lookup", () => {
 describe("widget limits", () => {
   const base = { ...WIDGET_DEFAULTS, heading: "Stock up" };
 
-  it("lets Free change the heading but not the styling", async () => {
+  it("lets Free change its own options but not Growth ones", async () => {
     await expect(
-      updateWidgetSettings({ shopId, actorId: null, plan: PLANS.free }, base),
-    ).resolves.toMatchObject({ heading: "Stock up" });
+      updateWidgetSettings({ shopId, actorId: null, plan: PLANS.free }, { ...base, accentColor: "#112233" }),
+    ).resolves.toMatchObject({ heading: "Stock up", accentColor: "#112233" });
     const error = await updateWidgetSettings(
       { shopId, actorId: null, plan: PLANS.free },
-      { ...base, accentColor: "#112233" },
+      { ...base, borderRadius: 20 },
     ).catch((e) => e);
     expect(error).toBeInstanceOf(ValidationError);
-    expect((error as ValidationError).fieldErrors.accentColor).toMatch(/Upgrade to Growth/);
+    expect((error as ValidationError).fieldErrors.borderRadius).toMatch(/Upgrade to Growth/);
   });
 
-  it("lets Pro change everything", async () => {
+  it("keeps font sizes and detailed colours for Pro", async () => {
     await expect(
-      updateWidgetSettings(
-        { shopId, actorId: null, plan: PLANS.pro },
-        { ...base, accentColor: "#112233", backgroundColor: "#000000", borderRadius: 20 },
-      ),
-    ).resolves.toMatchObject({ borderRadius: 20 });
+      updateWidgetSettings({ shopId, actorId: null, plan: PLANS.growth }, { ...base, spacing: "COMPACT", borderRadius: 20 }),
+    ).resolves.toMatchObject({ spacing: "COMPACT", borderRadius: 20 });
+    const error = await updateWidgetSettings(
+      { shopId, actorId: null, plan: PLANS.growth },
+      { ...base, headingSize: 24 },
+    ).catch((e) => e);
+    expect((error as ValidationError).fieldErrors.headingSize).toMatch(/Upgrade to Pro/);
   });
 
-  it("publishes default styling to the storefront after a downgrade", async () => {
+  it("lets a lower plan reset an option it no longer includes", async () => {
+    await updateWidgetSettings({ shopId, actorId: null, plan: PLANS.pro }, { ...base, headingSize: 24, badgeColor: "#00FF00" });
+    await expect(updateWidgetSettings({ shopId, actorId: null, plan: PLANS.free }, base)).resolves.toMatchObject({
+      headingSize: WIDGET_DEFAULTS.headingSize,
+      badgeColor: WIDGET_DEFAULTS.badgeColor,
+    });
+  });
+
+  it("publishes every option on Pro and defaults for locked ones after a downgrade", async () => {
     await updateWidgetSettings(
       { shopId, actorId: null, plan: PLANS.pro },
-      { ...base, accentColor: "#112233", borderRadius: 20 },
+      { ...base, borderRadius: 20, subheading: "At checkout", headingSize: 22, badgeColor: "#00FF00", spacing: "COMPACT" },
     );
     // No cached paid plan -> Free.
-    const config = await buildStorefrontConfig(shopId);
-    expect(config.widget).toMatchObject({
+    expect((await buildStorefrontConfig(shopId)).widget).toMatchObject({
       heading: "Stock up",
-      accent_color: WIDGET_DEFAULTS.accentColor,
+      subheading: "At checkout",
       border_radius: WIDGET_DEFAULTS.borderRadius,
+      heading_size: WIDGET_DEFAULTS.headingSize,
+      badge_color: WIDGET_DEFAULTS.badgeColor,
+      spacing: "comfortable",
     });
+    await prisma.billingSubscription.upsert({
+      where: { shopId },
+      create: { shopId, planName: "pro", status: "ACTIVE" },
+      update: { planName: "pro", status: "ACTIVE" },
+    });
+    expect((await buildStorefrontConfig(shopId)).widget).toMatchObject({
+      border_radius: 20,
+      heading_size: 22,
+      badge_color: "#00FF00",
+      spacing: "compact",
+    });
+  });
 
-    await prisma.billingSubscription.update({ where: { shopId }, data: { planName: "pro", status: "ACTIVE" } });
-    expect((await buildStorefrontConfig(shopId)).widget).toMatchObject({ accent_color: "#112233", border_radius: 20 });
+  it("publishes frequency names on Growth, but not on Free", async () => {
+    const overrides = { "101": { label: "Quarterly" }, "102": { hidden: true } };
+    const error = await updateWidgetSettings(
+      { shopId, actorId: null, plan: PLANS.free },
+      { ...base, planOverrides: overrides },
+    ).catch((e) => e);
+    expect((error as ValidationError).fieldErrors.planOverrides).toMatch(/Upgrade to Growth/);
+
+    await updateWidgetSettings({ shopId, actorId: null, plan: PLANS.growth }, { ...base, planOverrides: overrides });
+    await prisma.billingSubscription.upsert({
+      where: { shopId },
+      create: { shopId, planName: "growth", status: "ACTIVE" },
+      update: { planName: "growth", status: "ACTIVE" },
+    });
+    expect((await buildStorefrontConfig(shopId)).widget.plan_overrides).toEqual(overrides);
+  });
+
+  it("rejects a tier label without {quantity}", async () => {
+    const error = await updateWidgetSettings(
+      { shopId, actorId: null, plan: PLANS.free },
+      { ...base, buyLabel: "Buy more" },
+    ).catch((e) => e);
+    expect(error).toBeInstanceOf(ValidationError);
+    expect((error as ValidationError).fieldErrors.buyLabel).toBeTruthy();
   });
 });

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200">
+  <defs>
+    <linearGradient id="t-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2A2540"/><stop offset="1" stop-color="#121019"/></linearGradient>
+    <linearGradient id="t-tag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8B7BFF"/><stop offset="1" stop-color="#5FF0B8"/></linearGradient>
+  </defs>
+  <rect width="1200" height="1200" fill="url(#t-bg)"/>
+  <!-- Price tag, tilted. -->
+  <g transform="translate(-15 0) rotate(-38 600 600)">
+    <path d="M330 400 H770 L940 600 L770 800 H330 Q270 800 270 740 V460 Q270 400 330 400 Z" fill="url(#t-tag)"/>
+    <circle cx="845" cy="600" r="38" fill="#1B1828"/>
+  </g>
+  <!-- Upright % sign over the tag body. -->
+  <g fill="#1B1828" stroke="#1B1828">
+    <circle cx="452" cy="605" r="50" stroke="none"/>
+    <circle cx="590" cy="735" r="50" stroke="none"/>
+    <line x1="440" y1="760" x2="602" y2="580" stroke-width="46" stroke-linecap="round"/>
+  </g>
+</svg>

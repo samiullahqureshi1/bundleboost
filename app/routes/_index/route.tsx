@@ -1,5 +1,4 @@
-import { redirect, Form, useLoaderData, type LoaderFunctionArgs } from "react-router";
-import { login } from "../../shopify.server";
+import { redirect, type LoaderFunctionArgs } from "react-router";
 import styles from "./styles.module.css";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -9,12 +8,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     throw redirect(`/app?${url.searchParams.toString()}`);
   }
 
-  return { showForm: Boolean(login) };
+  return null;
 };
 
+/**
+ * Public landing page. App Store apps are installed and opened from Shopify
+ * only, so there's no shop-domain login form here.
+ */
 export default function App() {
-  const { showForm } = useLoaderData<typeof loader>();
-
   return (
     <div className={styles.index}>
       <div className={styles.content}>
@@ -22,18 +23,9 @@ export default function App() {
         <p className={styles.text}>
           Quantity breaks and volume discounts for Shopify stores.
         </p>
-        {showForm && (
-          <Form className={styles.form} method="post" action="/auth/login">
-            <label className={styles.label}>
-              <span>Shop domain</span>
-              <input className={styles.input} type="text" name="shop" />
-              <span>e.g: my-shop-domain.myshopify.com</span>
-            </label>
-            <button className={styles.button} type="submit">
-              Log in
-            </button>
-          </Form>
-        )}
+        <p className={styles.text}>
+          Open BundleBoost from your Shopify admin (Apps → BundleBoost), or install it from the Shopify App Store.
+        </p>
         <ul className={styles.list}>
           <li>
             <strong>Quantity tiers</strong>. Reward customers for buying more

@@ -1,0 +1,15 @@
+-- AlterTable
+ALTER TABLE "WidgetSettings" ADD COLUMN     "badgeColor" TEXT NOT NULL DEFAULT '#008060',
+ADD COLUMN     "badgeText" TEXT NOT NULL DEFAULT 'Best deal',
+ADD COLUMN     "badgeTextColor" TEXT NOT NULL DEFAULT '#FFFFFF',
+ADD COLUMN     "buyLabel" TEXT NOT NULL DEFAULT 'Buy {quantity}+',
+ADD COLUMN     "containerBorderColor" TEXT NOT NULL DEFAULT '#E3E3E8',
+ADD COLUMN     "headingSize" INTEGER NOT NULL DEFAULT 16,
+ADD COLUMN     "savingsColor" TEXT NOT NULL DEFAULT '#008060',
+ADD COLUMN     "selectedBackgroundColor" TEXT NOT NULL DEFAULT '#FFFFFF',
+ADD COLUMN     "showContainerBorder" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "showPricePerItem" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "spacing" TEXT NOT NULL DEFAULT 'COMFORTABLE',
+ADD COLUMN     "subheading" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "textSize" INTEGER NOT NULL DEFAULT 14,
+ADD COLUMN     "tierBorderColor" TEXT NOT NULL DEFAULT '#DCDCE0';

@@ -1,22 +1,52 @@
 .bb-breaks {
+  --bb-pad: 1rem;
+  --bb-gap: 0.85rem;
+  --bb-tier-pad: 0.75rem;
   background: var(--bb-bg);
   color: var(--bb-text);
   border-radius: var(--bb-radius);
-  border: 1px solid rgb(0 0 0 / 0.08);
-  padding: 1rem;
+  border: 1px solid var(--bb-container-border, rgb(0 0 0 / 0.08));
+  padding: var(--bb-pad);
   margin: 1rem 0;
+  font-size: var(--bb-text-size, 14px);
+}
+.bb-breaks--compact {
+  --bb-pad: 0.75rem;
+  --bb-gap: 0.65rem;
+  --bb-tier-pad: 0.55rem 0.7rem;
+}
+.bb-breaks--spacious {
+  --bb-pad: 1.35rem;
+  --bb-gap: 1rem;
+  --bb-tier-pad: 1rem 1.1rem;
+}
+.bb-breaks--borderless {
+  border-color: transparent;
 }
 .bb-breaks__heading {
+  font-size: var(--bb-heading-size, 16px);
   font-weight: 600;
+  line-height: 1.25;
   margin: 0 0 0.75rem;
+}
+.bb-breaks__subheading {
+  margin: -0.45rem 0 0.85rem;
+  font-size: 0.9em;
+  opacity: 0.75;
+}
+.bb-breaks__note {
+  margin: 0 0 0.5rem;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--bb-save, var(--bb-accent));
 }
 .bb-breaks__tiers {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  /* Room for the "Best deal" badge, which sits on the tier's top edge. */
-  gap: 0.85rem;
+  /* Room for the badge, which sits on the tier's top edge. */
+  gap: var(--bb-gap);
 }
 .bb-breaks--grid .bb-breaks__tiers {
   grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
@@ -30,12 +60,12 @@
   justify-content: space-between;
   align-items: center;
   gap: 0.25rem 0.75rem;
-  padding: 0.75rem;
+  padding: var(--bb-tier-pad);
   font: inherit;
   color: inherit;
   text-align: start;
   background: transparent;
-  border: 2px solid rgb(0 0 0 / 0.12);
+  border: 2px solid var(--bb-tier-border, rgb(0 0 0 / 0.12));
   border-radius: max(0px, calc(var(--bb-radius) - 2px));
   cursor: pointer;
 }
@@ -49,22 +79,82 @@
 }
 .bb-breaks__tier[aria-pressed="true"] {
   border-color: var(--bb-accent);
+  background: var(--bb-selected-bg, transparent);
 }
 .bb-breaks__qty {
   font-weight: 600;
 }
 .bb-breaks__save {
-  color: var(--bb-accent);
+  color: var(--bb-save, var(--bb-accent));
   font-weight: 600;
 }
 .bb-breaks__badge {
   position: absolute;
   top: -0.65rem;
   inset-inline-end: 0.5rem;
-  background: var(--bb-accent);
-  color: #fff;
+  background: var(--bb-badge-bg, var(--bb-accent));
+  color: var(--bb-badge-fg, #fff);
   font-size: 0.7rem;
   font-weight: 600;
   padding: 0.05rem 0.5rem;
   border-radius: 999px;
+}
+
+/* Purchase options (subscriptions) */
+.bb-purchase {
+  display: grid;
+  gap: calc(var(--bb-gap) * 0.6);
+  margin-block-start: var(--bb-gap);
+}
+.bb-purchase__option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: var(--bb-tier-pad);
+  border: 2px solid var(--bb-tier-border, rgb(0 0 0 / 0.12));
+  border-radius: max(0px, calc(var(--bb-radius) - 2px));
+  cursor: pointer;
+}
+.bb-purchase__option--active {
+  border-color: var(--bb-accent);
+  background: var(--bb-selected-bg, transparent);
+}
+.bb-purchase__radio {
+  flex: none;
+  margin: 0;
+  accent-color: var(--bb-accent);
+}
+.bb-purchase__label {
+  flex: 1;
+  font-weight: 600;
+}
+.bb-purchase__discount {
+  color: var(--bb-save, var(--bb-accent));
+}
+.bb-purchase__price {
+  font-weight: 600;
+}
+.bb-purchase__frequency {
+  display: grid;
+  gap: 0.35rem;
+}
+.bb-purchase__frequency[hidden] {
+  display: none;
+}
+.bb-purchase__frequency-label {
+  font-size: 0.9em;
+  opacity: 0.8;
+}
+.bb-purchase__select {
+  font: inherit;
+  color: inherit;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--bb-tier-border, rgb(0 0 0 / 0.12));
+  border-radius: max(0px, calc(var(--bb-radius) - 2px));
+  background: var(--bb-bg);
+}
+.bb-purchase__terms {
+  margin: 0;
+  font-size: 0.85em;
+  opacity: 0.75;
 }

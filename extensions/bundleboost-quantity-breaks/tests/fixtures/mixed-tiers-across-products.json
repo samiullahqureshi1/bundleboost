@@ -9,6 +9,7 @@
           {
             "id": "gid://shopify/CartLine/1",
             "quantity": 4,
+            "sellingPlanAllocation": null,
             "merchandise": {
               "__typename": "ProductVariant",
               "id": "gid://shopify/ProductVariant/11",
@@ -20,6 +21,7 @@
           {
             "id": "gid://shopify/CartLine/2",
             "quantity": 2,
+            "sellingPlanAllocation": null,
             "merchandise": {
               "__typename": "ProductVariant",
               "id": "gid://shopify/ProductVariant/21",

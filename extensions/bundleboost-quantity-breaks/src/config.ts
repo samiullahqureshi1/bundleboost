@@ -16,6 +16,11 @@ export type QuantityBreakConfig = {
   p: Record<string, string[]>;
   /** [minimum quantity, value] sorted by ascending quantity. */
   tiers: [number, string][];
+  /**
+   * Which cart lines count and get the discount: "S" = subscription lines
+   * only, "O" = one-time lines only, absent = both.
+   */
+  s?: "S" | "O";
 };
 
 export function parseConfig(raw: unknown): QuantityBreakConfig | null {
@@ -32,7 +37,8 @@ export function parseConfig(raw: unknown): QuantityBreakConfig | null {
   );
   if (!tiers.length) return null;
   tiers.sort((a, b) => a[0] - b[0]);
-  return { v: 1, t: c.t, m: typeof c.m === "string" ? c.m : "", p: c.p, tiers };
+  const purchase = c.s === "S" || c.s === "O" ? { s: c.s } : {};
+  return { v: 1, t: c.t, m: typeof c.m === "string" ? c.m : "", p: c.p, tiers, ...purchase };
 }
 
 /** "gid://shopify/Product/123" → "123" */

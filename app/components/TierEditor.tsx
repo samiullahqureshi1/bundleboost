@@ -20,6 +20,7 @@ export function TierEditor({
   disabled,
   maxTiers = CAMPAIGN_LIMITS.maxTiers,
   limitNote,
+  minQuantity = 2,
 }: {
   num: string;
   tiers: TierDraft[];
@@ -32,6 +33,8 @@ export function TierEditor({
   maxTiers?: number;
   /** Shown when the limit is reached, e.g. an upgrade prompt. */
   limitNote?: React.ReactNode;
+  /** Lowest allowed quantity (1 for subscription-only campaigns). */
+  minQuantity?: number;
 }) {
   const percent = discountType === "PERCENTAGE";
   const update = (index: number, patch: Partial<TierDraft>) =>
@@ -39,7 +42,7 @@ export function TierEditor({
 
   const addTier = () => {
     const last = tiers[tiers.length - 1];
-    const nextQty = last ? Number(last.minQuantity || 1) + 1 : 2;
+    const nextQty = last ? Number(last.minQuantity || 1) + 1 : minQuantity;
     onChange([
       ...tiers,
       { minQuantity: String(nextQty), value: "", label: "" },
@@ -71,7 +74,7 @@ export function TierEditor({
                 label={`Tier ${i + 1} minimum quantity`}
                 labelHidden
                 value={tier.minQuantity}
-                min={2}
+                min={minQuantity}
                 max={CAMPAIGN_LIMITS.maxQuantity}
                 step={1}
                 suffix="items"

@@ -1,0 +1,21 @@
+# "My subscriptions" page in Shopify customer accounts: customers view and
+# manage their BundleBoost subscriptions themselves. Merchants add it to the
+# customer account menu when prompted (Checkout and accounts editor).
+api_version = "2026-10"
+
+[[extensions]]
+name = "t:name"
+description = "t:description"
+handle = "bundleboost-subscriptions-portal"
+uid = "b42d3009-17da-e792-f213-d1ae4292b683c19e687f"
+type = "ui_extension"
+
+  [[extensions.targeting]]
+  module = "./src/SubscriptionsPage.tsx"
+  target = "customer-account.page.render"
+
+  [extensions.capabilities]
+  # Calls BundleBoost's backend (with Shopify's session token) to read and
+  # change the customer's subscriptions.
+  network_access = true
+  api_access = true

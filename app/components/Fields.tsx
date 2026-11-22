@@ -92,6 +92,7 @@ export function SelectField(
     <s-select
       ref={ref}
       label={props.label}
+      {...labelVisibility(props.labelHidden)}
       name={props.name}
       value={props.value}
       error={props.error}

@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200"><rect width="1200" height="1200" fill="#F4F3F8"/><clipPath id="k0"><rect x="70" y="40" width="500" height="500" rx="100"/></clipPath><g clip-path="url(#k0)"><svg x="70" y="40" width="500" height="500" viewBox="0 0 1200 1200">
+  <defs>
+    <linearGradient id="o-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7C6AF7"/>
+      <stop offset="1" stop-color="#3F2BB8"/>
+    </linearGradient>
+    <radialGradient id="o-glow" cx="0.2" cy="0.15" r="0.8">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.26"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="o-box" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E4DEFF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Full-bleed square: Shopify rounds the corners itself. -->
+  <rect width="1200" height="1200" fill="url(#o-bg)"/>
+  <rect width="1200" height="1200" fill="url(#o-glow)"/>
+
+  <!-- Three rising bundles (packages): buy more, save more. -->
+  <g>
+    <rect x="270" y="690" width="190" height="260" rx="34" fill="url(#o-box)" opacity="0.66"/>
+    <rect x="270" y="770" width="190" height="30" fill="#5B47E0" opacity="0.22"/>
+
+    <rect x="505" y="550" width="190" height="400" rx="34" fill="url(#o-box)" opacity="0.84"/>
+    <rect x="505" y="640" width="190" height="30" fill="#5B47E0" opacity="0.22"/>
+
+    <rect x="740" y="400" width="190" height="550" rx="34" fill="url(#o-box)"/>
+    <rect x="740" y="500" width="190" height="30" fill="#5B47E0" opacity="0.22"/>
+  </g>
+
+  <!-- Boost: one rising stroke clear of the bundles. -->
+  <line x1="300" y1="560" x2="815" y2="245" stroke="#5FF0B8" stroke-width="66" stroke-linecap="round"/>
+  <path d="M720 190 L905 190 L905 375 Z" fill="#5FF0B8" stroke="#5FF0B8" stroke-width="30" stroke-linejoin="round"/>
+</svg></g><text x="320" y="588" text-anchor="middle" font-family="Helvetica, Arial" font-size="30" font-weight="600" fill="#1D1B26">Current (violet bars)</text><clipPath id="k1"><rect x="630" y="40" width="500" height="500" rx="100"/></clipPath><g clip-path="url(#k1)"><svg x="630" y="40" width="500" height="500" viewBox="0 0 1200 1200">
+  <defs>
+    <linearGradient id="s-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF8A5B"/><stop offset="1" stop-color="#E2433A"/></linearGradient>
+    <radialGradient id="s-glow" cx="0.2" cy="0.15" r="0.8"><stop offset="0" stop-color="#FFF" stop-opacity="0.25"/><stop offset="1" stop-color="#FFF" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1200" height="1200" fill="url(#s-bg)"/>
+  <rect width="1200" height="1200" fill="url(#s-glow)"/>
+  <!-- two boxes below, one on top: a bundle -->
+  <g>
+    <rect x="245" y="610" width="330" height="330" rx="44" fill="#FFFFFF"/>
+    <rect x="390" y="610" width="40" height="330" fill="#FFD9C9"/>
+    <rect x="625" y="610" width="330" height="330" rx="44" fill="#FFFFFF"/>
+    <rect x="770" y="610" width="40" height="330" fill="#FFD9C9"/>
+    <rect x="435" y="250" width="330" height="330" rx="44" fill="#FFFFFF"/>
+    <rect x="580" y="250" width="40" height="330" fill="#FFD9C9"/>
+    <!-- bow on the top box -->
+    <path d="M600 250 C540 170 450 190 480 245 C500 280 560 262 600 250 Z" fill="#2B1B4A"/>
+    <path d="M600 250 C660 170 750 190 720 245 C700 280 640 262 600 250 Z" fill="#2B1B4A"/>
+  </g>
+</svg></g><text x="880" y="588" text-anchor="middle" font-family="Helvetica, Arial" font-size="30" font-weight="600" fill="#1D1B26">1. Bundle Stack</text><clipPath id="k2"><rect x="70" y="620" width="500" height="500" rx="100"/></clipPath><g clip-path="url(#k2)"><svg x="70" y="620" width="500" height="500" viewBox="0 0 1200 1200">
+  <defs>
+    <linearGradient id="t-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2A2540"/><stop offset="1" stop-color="#121019"/></linearGradient>
+    <linearGradient id="t-tag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8B7BFF"/><stop offset="1" stop-color="#5FF0B8"/></linearGradient>
+  </defs>
+  <rect width="1200" height="1200" fill="url(#t-bg)"/>
+  <!-- Price tag, tilted. -->
+  <g transform="translate(-15 0) rotate(-38 600 600)">
+    <path d="M330 400 H770 L940 600 L770 800 H330 Q270 800 270 740 V460 Q270 400 330 400 Z" fill="url(#t-tag)"/>
+    <circle cx="845" cy="600" r="38" fill="#1B1828"/>
+  </g>
+  <!-- Upright % sign over the tag body. -->
+  <g fill="#1B1828" stroke="#1B1828">
+    <circle cx="452" cy="605" r="50" stroke="none"/>
+    <circle cx="590" cy="735" r="50" stroke="none"/>
+    <line x1="440" y1="760" x2="602" y2="580" stroke-width="46" stroke-linecap="round"/>
+  </g>
+</svg></g><text x="320" y="1168" text-anchor="middle" font-family="Helvetica, Arial" font-size="30" font-weight="600" fill="#1D1B26">2. Discount Tag</text><clipPath id="k3"><rect x="630" y="620" width="500" height="500" rx="100"/></clipPath><g clip-path="url(#k3)"><svg x="630" y="620" width="500" height="500" viewBox="0 0 1200 1200">
+  <defs>
+    <linearGradient id="l-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#19C2A7"/><stop offset="1" stop-color="#0A6E8A"/></linearGradient>
+    <radialGradient id="l-glow" cx="0.2" cy="0.15" r="0.8"><stop offset="0" stop-color="#FFF" stop-opacity="0.22"/><stop offset="1" stop-color="#FFF" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1200" height="1200" fill="url(#l-bg)"/>
+  <rect width="1200" height="1200" fill="url(#l-glow)"/>
+  <!-- three stacked layers, growing brighter toward the top -->
+  <path d="M600 760 L900 870 L600 980 L300 870 Z" fill="#FFFFFF" opacity="0.45"/>
+  <path d="M600 610 L900 720 L600 830 L300 720 Z" fill="#FFFFFF" opacity="0.7"/>
+  <path d="M600 460 L900 570 L600 680 L300 570 Z" fill="#FFFFFF"/>
+  <!-- boost chevron -->
+  <path d="M430 360 L600 210 L770 360" fill="none" stroke="#FFE27A" stroke-width="72" stroke-linecap="round" stroke-linejoin="round"/>
+</svg></g><text x="880" y="1168" text-anchor="middle" font-family="Helvetica, Arial" font-size="30" font-weight="600" fill="#1D1B26">3. Layers Boost</text></svg>

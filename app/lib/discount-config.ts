@@ -11,11 +11,15 @@ export type DiscountConfigSource = {
   message: string;
   products: { productGid: string; variantGids: string[] }[];
   tiers: { minQuantity: number; value: string }[];
+  purchaseType?: "ONE_TIME" | "SUBSCRIPTION" | "BOTH";
 };
 
 const numericId = (gid: string) => gid.slice(gid.lastIndexOf("/") + 1);
 
 export function buildFunctionConfig(source: DiscountConfigSource) {
+  // Omitted for "both" so existing discounts keep the same configuration.
+  const purchase: { s?: "S" | "O" } =
+    source.purchaseType === "SUBSCRIPTION" ? { s: "S" } : source.purchaseType === "ONE_TIME" ? { s: "O" } : {};
   return {
     v: 1 as const,
     t: source.discountType === "PERCENTAGE" ? ("P" as const) : ("F" as const),
@@ -26,6 +30,7 @@ export function buildFunctionConfig(source: DiscountConfigSource) {
     tiers: [...source.tiers]
       .sort((a, b) => a.minQuantity - b.minQuantity)
       .map((t) => [t.minQuantity, Number(t.value).toFixed(2)] as [number, string]),
+    ...purchase,
   };
 }
 

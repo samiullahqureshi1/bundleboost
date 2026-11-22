@@ -1,0 +1,142 @@
+{
+  "name": "My subscriptions",
+  "description": "Customers view and manage their BundleBoost subscriptions.",
+  "page": {
+    "heading": "My subscriptions",
+    "subheading": "Skip, pause, change or cancel your subscriptions anytime."
+  },
+  "status": {
+    "ACTIVE": "Active",
+    "PAUSED": "Paused",
+    "FAILED": "Payment issue",
+    "CANCELLED": "Cancelled",
+    "EXPIRED": "Ended"
+  },
+  "list": {
+    "current": "Current subscriptions",
+    "past": "Previous subscriptions",
+    "subscription": "Subscription",
+    "titleMore": "{{title}} + {{count}} more",
+    "summary": "{{frequency}} · {{amount}}",
+    "nextOrder": "Next order: {{date}}",
+    "manage": "Manage {{title}}",
+    "emptyHeading": "No subscriptions yet",
+    "emptyBody": "When you subscribe to a product, you'll manage it here."
+  },
+  "detail": {
+    "subheading": "Subscribed on {{date}}",
+    "status": "Status",
+    "nextOrder": "Next order",
+    "amount": "Each order",
+    "frequency": "Delivery",
+    "pausedNext": "Paused",
+    "plusShipping": "+ {{amount}} shipping",
+    "freeShipping": "Free shipping",
+    "skippedHeading": "Next order skipped",
+    "skippedBody": "Your order on {{date}} won't be sent or charged.",
+    "skippedOn": "Skipped: {{date}}",
+    "failedHeading": "Your last payment didn't go through",
+    "failedBody": "{{reason}} ({{date}}). Update your payment method so your next order isn't missed."
+  },
+  "items": {
+    "heading": "What's included",
+    "quantity": "Quantity: {{quantity}}"
+  },
+  "manage": {
+    "heading": "Manage subscription",
+    "body": "Skip an order, take a break, or cancel. No need to contact the store."
+  },
+  "actions": {
+    "back": "Back to subscriptions",
+    "skip": "Skip next order",
+    "unskip": "Undo skip",
+    "pause": "Pause",
+    "resume": "Resume subscription",
+    "cancel": "Cancel subscription",
+    "tryAgain": "Try again",
+    "discard": "Cancel"
+  },
+  "confirm": {
+    "keep": "Go back",
+    "skip": {
+      "heading": "Skip your next order?",
+      "body": "Your order on {{date}} won't be sent or charged. Later orders continue as usual.",
+      "confirm": "Skip order"
+    },
+    "pause": {
+      "heading": "Pause your subscription?",
+      "body": "No orders are sent or charged while it's paused. Resume anytime from this page.",
+      "confirm": "Pause subscription"
+    },
+    "cancel": {
+      "heading": "Cancel your subscription?",
+      "body": "No more orders will be sent or charged. Orders already placed aren't affected. This can't be undone.",
+      "confirm": "Cancel subscription"
+    }
+  },
+  "done": {
+    "skip": "Next order skipped",
+    "unskip": "Order brought back",
+    "pause": "Subscription paused",
+    "resume": "Subscription resumed",
+    "cancel": "Subscription cancelled",
+    "frequency": "Delivery frequency updated",
+    "payment": "Check your email for a secure link",
+    "address": "Delivery address updated"
+  },
+  "frequency": {
+    "heading": "Delivery frequency",
+    "label": "Deliver every",
+    "optionSave": "{{label}} (save {{percent}}%)",
+    "note": "Your next order date and price update to match.",
+    "save": "Save frequency"
+  },
+  "payment": {
+    "heading": "Payment method",
+    "expires": "Expires {{date}}",
+    "none": "No payment method on file.",
+    "update": "Update payment method",
+    "updateHelp": "We'll email you a secure link from the store to update your card."
+  },
+  "address": {
+    "heading": "Delivery address",
+    "none": "No delivery address.",
+    "change": "Change address",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "address1": "Address",
+    "address2": "Apartment, suite, etc. (optional)",
+    "city": "City",
+    "zip": "Postal code",
+    "zone": "State/province code (e.g. CA)",
+    "country": "Country/region code (e.g. US)",
+    "required": "Enter the address, city and a 2-letter country/region code.",
+    "check": "Continue",
+    "save": "Save address",
+    "noShipping": "This store doesn't ship your subscription to that address.",
+    "quoteHeading": "We can deliver here",
+    "quoteBody": "Shipping: {{method}}, {{amount}} per order.",
+    "quoteBodyNoPrice": "Shipping: {{method}}."
+  },
+  "history": {
+    "heading": "Order history",
+    "empty": "No orders yet.",
+    "failedHeading": "Payments that didn't go through",
+    "failedLine": "{{date}}: {{reason}}"
+  },
+  "fulfillment": {
+    "FULFILLED": "Delivered",
+    "UNFULFILLED": "Processing",
+    "PARTIALLY_FULFILLED": "Partly shipped",
+    "IN_PROGRESS": "In progress",
+    "ON_HOLD": "On hold",
+    "SCHEDULED": "Scheduled",
+    "RESTOCKED": "Returned"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "network": "We couldn't reach the store. Check your connection and try again.",
+    "loadHeading": "We couldn't load your subscriptions",
+    "notFound": "We couldn't find that subscription."
+  }
+}

@@ -1,7 +1,6 @@
 import { redirect } from "react-router";
 import { authenticate } from "../shopify.server";
 import { findShopByDomain, onShopAuthenticated } from "./services/shop.service";
-import prisma from "../db.server";
 import { env } from "./env";
 
 /**
@@ -17,44 +16,24 @@ export async function requireAdmin(request: Request) {
     url.searchParams.get("embedded") === "1" ||
     Boolean(request.headers.get("authorization"));
 
-  const isDocumentNavigation =
-    request.headers.get("sec-fetch-dest") === "document" ||
-    request.headers.get("sec-fetch-mode") === "navigate";
+  // Only a top-level browser tab (e.g. returning from a Shopify charge
+  // confirmation outside the admin) is sent back into the embedded admin.
+  // Loads inside the admin iframe report sec-fetch-dest "iframe" and must be
+  // left to authenticate.admin; redirecting them to admin.shopify.com inside
+  // the iframe is blocked by Shopify and breaks navigation.
+  const isTopLevelDocument = request.headers.get("sec-fetch-dest") === "document";
+  const shopParam = url.searchParams.get("shop");
 
-  // If this is a top-level document request without host/embedded context
-  // (e.g. redirected back from a Shopify charge confirmation in the top-level window),
-  // redirect the browser into the Shopify Admin embedded app URL.
-  if (!host && !isEmbedded && isDocumentNavigation) {
-    let shopDomain = url.searchParams.get("shop");
-    if (!shopDomain) {
-      try {
-        const latestShop = await prisma.shop.findFirst({
-          where: { uninstalledAt: null },
-          orderBy: { updatedAt: "desc" },
-        });
-        shopDomain = latestShop?.domain ?? null;
-      } catch {
-        // DB fallback
-      }
-    }
-    if (!shopDomain) {
-      try {
-        const latestSession = await prisma.session.findFirst({
-          orderBy: { id: "desc" },
-        });
-        shopDomain = latestSession?.shop ?? null;
-      } catch {
-        // session fallback
-      }
-    }
-    if (shopDomain) {
-      const cleanShop = shopDomain.replace(/\.myshopify\.com$/, "");
-      const apiKey = env().SHOPIFY_API_KEY;
-      const adminPath = `${url.pathname}${url.search}`;
-      throw redirect(
-        `https://admin.shopify.com/store/${cleanShop}/apps/${apiKey}${adminPath}`,
-      );
-    }
+  // The shop must come from the request; never guess it from the database,
+  // which could send a merchant to another store's admin.
+  if (!host && !isEmbedded && isTopLevelDocument && shopParam && /^[a-z0-9][a-z0-9-]*\.myshopify\.com$/i.test(shopParam)) {
+    const cleanShop = shopParam.replace(/\.myshopify\.com$/i, "");
+    const apiKey = env().SHOPIFY_API_KEY;
+    url.searchParams.delete("shop");
+    const query = url.searchParams.toString();
+    throw redirect(
+      `https://admin.shopify.com/store/${cleanShop}/apps/${apiKey}${url.pathname}${query ? `?${query}` : ""}`,
+    );
   }
 
   const auth = await authenticate.admin(request);

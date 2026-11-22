@@ -9,6 +9,7 @@
           {
             "id": "gid://shopify/CartLine/1",
             "quantity": 9,
+            "sellingPlanAllocation": null,
             "merchandise": {
               "__typename": "CustomProduct"
             }

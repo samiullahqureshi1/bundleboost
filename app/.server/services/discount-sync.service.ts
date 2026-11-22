@@ -52,6 +52,7 @@ export function buildDiscountInput(
       variantGids: p.variants.map((v) => v.variantGid),
     })),
     tiers: campaign.tiers.map((t) => ({ minQuantity: t.minQuantity, value: t.value.toString() })),
+    purchaseType: campaign.purchaseType,
   });
   return {
     title,
@@ -63,6 +64,9 @@ export function buildDiscountInput(
       shippingDiscounts: settings.combineWithShippingDiscounts,
     },
     configJson: json,
+    appliesOnOneTimePurchase: campaign.purchaseType !== "SUBSCRIPTION",
+    appliesOnSubscription: campaign.purchaseType !== "ONE_TIME",
+    recurringCycleLimit: campaign.recurringCycleLimit,
   };
 }
 

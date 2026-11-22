@@ -12,6 +12,8 @@ export type CartLinesDiscountsGenerateRunInput = {
     lines: {
       id: string;
       quantity: number;
+      /** Present when the line is a subscription (selling plan). */
+      sellingPlanAllocation?: { __typename: string } | null;
       merchandise:
         | { __typename: "ProductVariant"; id: string; product: { id: string } }
         | { __typename: "CustomProduct" };
@@ -67,6 +69,11 @@ export function cartLinesDiscountsGenerateRun(
   for (const line of input.cart.lines) {
     const merchandise = line.merchandise;
     if (merchandise.__typename !== "ProductVariant") continue;
+    // Subscription-only / one-time-only campaigns count matching lines only.
+    if (config.s) {
+      const subscription = Boolean(line.sellingPlanAllocation);
+      if (config.s === "S" ? !subscription : subscription) continue;
+    }
     const productId = numericId(merchandise.product.id);
     const allowedVariants = config.p[productId];
     if (!allowedVariants) continue;

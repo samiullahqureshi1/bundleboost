@@ -15,7 +15,26 @@ export type WidgetField =
   | "backgroundColor"
   | "borderRadius"
   | "showSavings"
-  | "highlightBestDeal";
+  | "highlightBestDeal"
+  | "subheading"
+  | "buyLabel"
+  | "badgeText"
+  | "spacing"
+  | "headingSize"
+  | "textSize"
+  | "tierBorderColor"
+  | "selectedBackgroundColor"
+  | "savingsColor"
+  | "badgeColor"
+  | "badgeTextColor"
+  | "containerBorderColor"
+  | "showPricePerItem"
+  | "showContainerBorder"
+  | "showPurchaseOptions"
+  | "oneTimeLabel"
+  | "subscribeLabel"
+  | "frequencyLabel"
+  | "planOverrides";
 
 export type Plan = {
   handle: PlanHandle;
@@ -32,9 +51,47 @@ export type Plan = {
   features: string[];
 };
 
-const BASIC_WIDGET: WidgetField[] = ["heading"];
-const CUSTOM_WIDGET: WidgetField[] = [...BASIC_WIDGET, "layout", "accentColor", "showSavings", "highlightBestDeal"];
-const FULL_WIDGET: WidgetField[] = [...CUSTOM_WIDGET, "textColor", "backgroundColor", "borderRadius"];
+// Widget options by plan. Each plan includes everything from the one below.
+// Free: the essentials (text, layout, what to show, brand colour).
+const FREE_WIDGET: WidgetField[] = [
+  "heading",
+  "subheading",
+  "layout",
+  "showSavings",
+  "highlightBestDeal",
+  "accentColor",
+  "showPurchaseOptions",
+];
+
+// Growth: labels, spacing and shape, and the main colours (presets).
+const GROWTH_WIDGET: WidgetField[] = [
+  ...FREE_WIDGET,
+  "buyLabel",
+  "badgeText",
+  "showPricePerItem",
+  "showContainerBorder",
+  "spacing",
+  "borderRadius",
+  "textColor",
+  "backgroundColor",
+  "oneTimeLabel",
+  "subscribeLabel",
+  "frequencyLabel",
+  "planOverrides",
+];
+
+// Pro: everything, including font sizes and every individual colour.
+const FULL_WIDGET: WidgetField[] = [
+  ...GROWTH_WIDGET,
+  "headingSize",
+  "textSize",
+  "tierBorderColor",
+  "selectedBackgroundColor",
+  "savingsColor",
+  "badgeColor",
+  "badgeTextColor",
+  "containerBorderColor",
+];
 
 export const PLANS: Record<PlanHandle, Plan> = {
   free: {
@@ -45,13 +102,13 @@ export const PLANS: Record<PlanHandle, Plan> = {
     activeCampaigns: 1,
     liveProducts: 5,
     tiersPerCampaign: 3,
-    widget: BASIC_WIDGET,
+    widget: FREE_WIDGET,
     features: [
       "1 active campaign",
       "Up to 5 products",
       "3 discount tiers",
       "Percentage & fixed discounts",
-      "Basic widget",
+      "Basic widget: text, layout & brand colour",
     ],
   },
   growth: {
@@ -62,13 +119,13 @@ export const PLANS: Record<PlanHandle, Plan> = {
     activeCampaigns: 10,
     liveProducts: 100,
     tiersPerCampaign: 10,
-    widget: CUSTOM_WIDGET,
+    widget: GROWTH_WIDGET,
     features: [
       "10 active campaigns",
       "Up to 100 products",
       "Up to 10 discount tiers",
       "Percentage & fixed discounts",
-      "Customizable widget",
+      "Custom widget: labels, spacing, shape & colour presets",
       "Email support",
     ],
   },
@@ -86,7 +143,7 @@ export const PLANS: Record<PlanHandle, Plan> = {
       "Up to 25 active campaigns*",
       "Unlimited product targeting*",
       "Up to 20 discount tiers",
-      "Full widget customization",
+      "Full widget customization: font sizes & every colour",
       "Percentage & fixed discounts",
       "Priority support",
     ],
@@ -129,7 +186,32 @@ export const WIDGET_DEFAULTS = {
   borderRadius: 8,
   showSavings: true,
   highlightBestDeal: true,
+  subheading: "",
+  buyLabel: "Buy {quantity}+",
+  badgeText: "Best deal",
+  spacing: "COMFORTABLE",
+  headingSize: 16,
+  textSize: 14,
+  tierBorderColor: "#DCDCE0",
+  selectedBackgroundColor: "#FFFFFF",
+  savingsColor: "#008060",
+  badgeColor: "#008060",
+  badgeTextColor: "#FFFFFF",
+  containerBorderColor: "#E3E3E8",
+  showPricePerItem: true,
+  showContainerBorder: true,
+  showPurchaseOptions: true,
+  oneTimeLabel: "One-time purchase",
+  subscribeLabel: "Subscribe & save {discount}",
+  frequencyLabel: "Delivery frequency",
+  planOverrides: {} as Record<string, { label?: string; hidden?: boolean }>,
 } as const;
+
+/** Compares setting values, including objects (plan overrides) and colours in any case. */
+export function sameSetting(a: unknown, b: unknown): boolean {
+  const norm = (v: unknown) => (typeof v === "string" ? v.toLowerCase() : JSON.stringify(v ?? null));
+  return norm(a) === norm(b);
+}
 
 /** Widget settings as the plan allows them: locked fields fall back to defaults. */
 export function applyWidgetPlan<T extends Record<WidgetField, unknown>>(settings: T, plan: Plan): T {

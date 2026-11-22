@@ -37,6 +37,10 @@ export type DiscountInput = {
     shippingDiscounts: boolean;
   };
   configJson: string;
+  /** Subscriptions (selling plans): which purchases, and for how many orders (0 = all). */
+  appliesOnOneTimePurchase: boolean;
+  appliesOnSubscription: boolean;
+  recurringCycleLimit: number;
 };
 
 const CREATE = `#graphql
@@ -131,6 +135,10 @@ function discountFields(input: DiscountInput) {
     startsAt: input.startsAt.toISOString(),
     endsAt: input.endsAt ? input.endsAt.toISOString() : null,
     combinesWith: input.combinesWith,
+    appliesOnOneTimePurchase: input.appliesOnOneTimePurchase,
+    appliesOnSubscription: input.appliesOnSubscription,
+    // Only valid when the discount applies to subscriptions.
+    ...(input.appliesOnSubscription ? { recurringCycleLimit: input.recurringCycleLimit } : {}),
   };
 }
 

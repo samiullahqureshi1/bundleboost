@@ -182,6 +182,8 @@ export default function CampaignDetailPage() {
             value: t.value,
             label: t.label ?? "",
           })),
+          purchaseType: campaign.purchaseType,
+          recurringCycleLimit: String(campaign.recurringCycleLimit),
         }}
         currencyCode={currencyCode}
         defaultLabel={defaultLabel}

@@ -33,6 +33,8 @@ export default function App() {
           Overview
         </Link>
         <Link to="/app/campaigns">Campaigns</Link>
+        <Link to="/app/subscriptions">Subscriptions</Link>
+        <Link to="/app/subscribers">Subscribers</Link>
         <Link to="/app/widget">Widget</Link>
         <Link to="/app/analytics">Analytics</Link>
         <Link to="/app/billing">Billing</Link>

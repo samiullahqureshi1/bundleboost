@@ -1,4 +1,4 @@
-import type { CampaignStatus, DiscountType, Prisma } from "@prisma/client";
+import type { CampaignStatus, DiscountType, Prisma, PurchaseType } from "@prisma/client";
 import prisma from "../../db.server";
 
 /**
@@ -23,6 +23,8 @@ export type CampaignWriteData = {
   name: string;
   discountType: DiscountType;
   discountLabel: string | null;
+  purchaseType: PurchaseType;
+  recurringCycleLimit: number;
   startsAt: Date | null;
   endsAt: Date | null;
   products: {
@@ -129,6 +131,8 @@ export async function insertCampaign(
       name: data.name,
       discountType: data.discountType,
       discountLabel: data.discountLabel,
+      purchaseType: data.purchaseType,
+      recurringCycleLimit: data.recurringCycleLimit,
       startsAt: data.startsAt,
       endsAt: data.endsAt,
       status: "DRAFT",
@@ -154,6 +158,8 @@ export async function replaceCampaign(
       name: data.name,
       discountType: data.discountType,
       discountLabel: data.discountLabel,
+      purchaseType: data.purchaseType,
+      recurringCycleLimit: data.recurringCycleLimit,
       startsAt: data.startsAt,
       endsAt: data.endsAt,
     },

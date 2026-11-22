@@ -174,6 +174,9 @@ function toWriteData(
     name: input.name,
     discountType: input.discountType,
     discountLabel: input.discountLabel ?? null,
+    purchaseType: input.purchaseType,
+    // Only meaningful when subscriptions are included.
+    recurringCycleLimit: input.purchaseType === "ONE_TIME" ? 1 : input.recurringCycleLimit,
     startsAt: input.startsAt ?? null,
     endsAt: input.endsAt ?? null,
     products,

@@ -5,7 +5,7 @@ import {
   widgetSettingsSchema,
 } from "../../lib/settings-validation";
 import { ValidationError } from "../errors";
-import { planFor, type Plan, type WidgetField } from "../../lib/plans";
+import { planFor, sameSetting, WIDGET_DEFAULTS, type Plan, type WidgetField } from "../../lib/plans";
 import { recordAudit } from "./audit.service";
 
 type Actor = { shopId: string; actorId: string | null };
@@ -19,8 +19,9 @@ export async function getWidgetSettings(shopId: string) {
 }
 
 /**
- * Saves widget settings. With a plan, fields the plan doesn't include can't be
- * changed from what's stored (the storefront shows defaults for them anyway).
+ * Saves widget settings. With a plan, fields the plan doesn't include can only
+ * keep their stored value or go back to the default (the storefront shows
+ * defaults for them anyway).
  */
 export async function updateWidgetSettings(ctx: Actor & { plan?: Plan }, raw: unknown) {
   const parsed = widgetSettingsSchema.safeParse(raw);
@@ -31,7 +32,9 @@ export async function updateWidgetSettings(ctx: Actor & { plan?: Plan }, raw: un
     const locked: Record<string, string> = {};
     for (const field of Object.keys(parsed.data) as WidgetField[]) {
       if (plan.widget.includes(field)) continue;
-      if (String(parsed.data[field]).toLowerCase() !== String(current[field]).toLowerCase()) {
+      const value = parsed.data[field];
+      // Unchanged, or reset to the default, is always allowed.
+      if (!sameSetting(value, current[field]) && !sameSetting(value, WIDGET_DEFAULTS[field])) {
         const next = planFor((p) => p.widget.includes(field));
         locked[field] = `Not included in the ${plan.name} plan.${next ? ` Upgrade to ${next.name} to change it.` : ""}`;
       }

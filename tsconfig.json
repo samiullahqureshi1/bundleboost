@@ -1,5 +1,8 @@
 {
   "include": ["env.d.ts", "**/*.ts", "**/*.tsx", ".react-router/types/**/*"],
+  // Customer account extensions use Preact and their own Polaris types; each
+  // has its own tsconfig (npm run typecheck:extensions).
+  "exclude": ["node_modules", "build", "extensions/bundleboost-subscriptions-portal", "extensions/bundleboost-subscription-links"],
   "compilerOptions": {
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "strict": true,

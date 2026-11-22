@@ -8,12 +8,59 @@
   if config.currency == cart.currency.iso_code
     assign same_currency = true
   endif
+  assign show_purchase = false
+  assign plan_overrides = widget.plan_overrides
+  assign visible_plans = 0
+  assign own_plans = 0
+  assign own_groups = 0
+  assign first_visible_plan = nil
+  for group in product.selling_plan_groups
+    # Only BundleBoost's own plans; other apps' purchase options are theirs.
+    if group.app_id != 'bundleboost'
+      continue
+    endif
+    assign own_groups = own_groups | plus: 1
+    assign own_plans = own_plans | plus: group.selling_plans.size
+  endfor
+  if widget.show_purchase_options != false and own_plans > 0
+    for group in product.selling_plan_groups
+      if group.app_id != 'bundleboost'
+        continue
+      endif
+      for plan in group.selling_plans
+        assign plan_key = plan.id | append: ''
+        assign plan_override = plan_overrides[plan_key]
+        unless plan_override.hidden
+          assign visible_plans = visible_plans | plus: 1
+          unless first_visible_plan
+            assign first_visible_plan = plan
+          endunless
+        endunless
+      endfor
+    endfor
+    if visible_plans > 0
+      assign show_purchase = true
+    endif
+  endif
+
+  assign has_offers = false
+  if offers and offers.size > 0
+    assign has_offers = true
+  endif
+  # The block shows for a product with a quantity offer, subscription
+  # plans (purchase options), or both.
+  assign show_widget = false
+  if product
+    if has_offers or show_purchase
+      assign show_widget = true
+    endif
+  endif
 -%}
 
-{%- if product and offers and offers.size > 0 -%}
+{%- if show_widget -%}
   <div
-    class="bb-breaks bb-breaks--{{ widget.layout | default: 'stacked' | escape }}"
-    style="--bb-accent: {{ widget.accent_color | default: '#008060' | escape }}; --bb-text: {{ widget.text_color | default: '#202223' | escape }}; --bb-bg: {{ widget.background_color | default: '#FFFFFF' | escape }}; --bb-radius: {{ widget.border_radius | default: 8 }}px;"
+    class="bb-breaks bb-breaks--{{ widget.layout | default: 'stacked' | escape }} bb-breaks--{{ widget.spacing | default: 'comfortable' | escape }}{% if widget.show_container_border == false %} bb-breaks--borderless{% endif %}"
+    style="--bb-accent: {{ widget.accent_color | default: '#008060' | escape }}; --bb-text: {{ widget.text_color | default: '#202223' | escape }}; --bb-bg: {{ widget.background_color | default: '#FFFFFF' | escape }}; --bb-radius: {{ widget.border_radius | default: 8 }}px; --bb-heading-size: {{ widget.heading_size | default: 16 }}px; --bb-text-size: {{ widget.text_size | default: 14 }}px; --bb-tier-border: {{ widget.tier_border_color | default: '#DCDCE0' | escape }}; --bb-selected-bg: {{ widget.selected_background_color | default: '#FFFFFF' | escape }}; --bb-save: {{ widget.savings_color | default: widget.accent_color | default: '#008060' | escape }}; --bb-badge-bg: {{ widget.badge_color | default: widget.accent_color | default: '#008060' | escape }}; --bb-badge-fg: {{ widget.badge_text_color | default: '#FFFFFF' | escape }}; --bb-container-border: {{ widget.container_border_color | default: '#E3E3E8' | escape }};"
     data-bb-breaks
     data-same-currency="{{ same_currency }}"
     {{ block.shopify_attributes }}
@@ -22,7 +69,11 @@
       { {%- for variant in product.variants -%}"{{ variant.id }}": {{ variant.price }}{%- unless forloop.last -%},{%- endunless -%}{%- endfor -%} }
     </script>
 
+    {%- if has_offers -%}
     <p class="bb-breaks__heading">{{ widget.heading | escape }}</p>
+    {%- if widget.subheading != blank -%}
+      <p class="bb-breaks__subheading">{{ widget.subheading | escape }}</p>
+    {%- endif -%}
 
     {%- for offer in offers -%}
       {%- liquid
@@ -35,14 +86,28 @@
           endunless
         endif
         assign best_qty = offer.tiers.last.qty
+        assign purchase = offer.purchase | default: 'both'
+        if purchase == 'subscription'
+          if own_plans == 0
+            assign applies = false
+          elsif show_purchase and product.requires_selling_plan == false
+            assign applies = false
+          endif
+        elsif purchase == 'one_time' and product.requires_selling_plan
+          assign applies = false
+        endif
       -%}
       <div
         class="bb-breaks__offer"
         data-bb-offer
         data-type="{{ offer.type | escape }}"
+        data-purchase="{{ purchase | escape }}"
         data-variants="{{ variant_list | escape }}"
         {% unless applies %}hidden{% endunless %}
       >
+        {%- if purchase == 'subscription' -%}
+          <p class="bb-breaks__note">{{ 'quantity_breaks.subscription_only' | t }}</p>
+        {%- endif -%}
         <ul class="bb-breaks__tiers" role="list">
           {%- for tier in offer.tiers -%}
             {%- liquid
@@ -63,17 +128,31 @@
                 data-value="{{ tier.value }}"
               >
                 {%- if widget.highlight_best_deal and tier.qty == best_qty -%}
-                  <span class="bb-breaks__badge">{{ 'quantity_breaks.best_deal' | t }}</span>
+                  <span class="bb-breaks__badge">
+                    {%- if widget.badge_text != blank -%}
+                      {{ widget.badge_text | escape }}
+                    {%- else -%}
+                      {{ 'quantity_breaks.best_deal' | t }}
+                    {%- endif -%}
+                  </span>
                 {%- endif -%}
                 <span class="bb-breaks__qty">
-                  {{ 'quantity_breaks.buy_quantity' | t: quantity: tier.qty }}
+                  {%- if widget.buy_label != blank -%}
+                    {%- assign qty_text = tier.qty | append: '' -%}
+                    {%- assign qty_label = widget.buy_label | replace: '{quantity}', qty_text -%}
+                    {{ qty_label | escape }}
+                  {%- else -%}
+                    {{ 'quantity_breaks.buy_quantity' | t: quantity: tier.qty }}
+                  {%- endif -%}
                   {%- if tier.label != blank %} · {{ tier.label | escape }}{% endif -%}
                 </span>
+                {%- if widget.show_price_per_item != false -%}
                 {%- if offer.type == 'percentage' or same_currency -%}
                   <span class="bb-breaks__price">
                     <span data-bb-amount>{{ tier_price | money }}</span>
                     {{ 'quantity_breaks.each' | t }}
                   </span>
+                {%- endif -%}
                 {%- endif -%}
                 {%- if widget.show_savings -%}
                   <span class="bb-breaks__save">
@@ -90,6 +169,116 @@
         </ul>
       </div>
     {%- endfor -%}
+    {%- endif -%}
+
+    {%- if show_purchase -%}
+      {%- liquid
+        assign requires_plan = product.requires_selling_plan
+        # The allocation (price) of BundleBoost's first visible plan for this variant.
+        assign first_allocation = nil
+        for allocation in current_variant.selling_plan_allocations
+          if allocation.selling_plan.id == first_visible_plan.id
+            assign first_allocation = allocation
+            break
+          endif
+        endfor
+        assign first_adjustment = first_visible_plan.price_adjustments.first
+        assign discount_text = ''
+        if first_adjustment.value_type == 'percentage'
+          assign discount_text = first_adjustment.value | append: '%'
+        elsif first_adjustment.value_type == 'fixed_amount'
+          assign discount_text = first_adjustment.value | money
+        endif
+
+        # The t filter already HTML-escapes translations; only the merchant's
+        # own text is escaped here, so "&" isn't shown as "&amp;".
+        assign one_time_label = 'purchase_options.one_time' | t
+        if widget.one_time_label != blank
+          assign one_time_label = widget.one_time_label | escape
+        endif
+        assign frequency_label = 'purchase_options.frequency' | t
+        if widget.frequency_label != blank
+          assign frequency_label = widget.frequency_label | escape
+        endif
+        assign subscribe_label = 'purchase_options.subscribe' | t
+        if widget.subscribe_label != blank
+          assign subscribe_label = widget.subscribe_label | escape
+        endif
+        assign discount_html = '<span class="bb-purchase__discount" data-bb-plan-discount>' | append: discount_text | append: '</span>'
+        assign subscribe_html = subscribe_label | replace: '{discount}', discount_html
+      -%}
+      <div class="bb-purchase" data-bb-purchase>
+        <script type="application/json" data-bb-plan-prices>
+          { {%- for variant in product.variants -%}"{{ variant.id }}": { {%- for allocation in variant.selling_plan_allocations -%}"{{ allocation.selling_plan.id }}": {{ allocation.price }}{%- unless forloop.last -%},{%- endunless -%}{%- endfor -%} }{%- unless forloop.last -%},{%- endunless -%}{%- endfor -%} }
+        </script>
+        {%- unless requires_plan -%}
+          <label class="bb-purchase__option">
+            <input
+              type="radio"
+              class="bb-purchase__radio"
+              name="bb-purchase-{{ block.id }}"
+              value="one-time"
+              data-bb-plan-choice
+              checked
+            >
+            <span class="bb-purchase__label">{{ one_time_label }}</span>
+            <span class="bb-purchase__price" data-bb-plan-onetime-price>{{ current_variant.price | money }}</span>
+          </label>
+        {%- endunless -%}
+        <label class="bb-purchase__option">
+          <input
+            type="radio"
+            class="bb-purchase__radio"
+            name="bb-purchase-{{ block.id }}"
+            value="subscribe"
+            data-bb-plan-choice
+            {% if requires_plan %}
+              checked
+            {% endif %}
+          >
+          <span class="bb-purchase__label">{{ subscribe_html }}</span>
+          {%- if first_allocation -%}
+            <span class="bb-purchase__price" data-bb-plan-sub-price>{{ first_allocation.price | money }}</span>
+          {%- endif -%}
+        </label>
+        <div class="bb-purchase__frequency" data-bb-frequency {% unless requires_plan %}hidden{% endunless %}>
+          <label class="bb-purchase__frequency-label" for="bb-frequency-{{ block.id }}">{{ frequency_label }}</label>
+          <select id="bb-frequency-{{ block.id }}" class="bb-purchase__select" data-bb-plan-select>
+            {%- for group in product.selling_plan_groups -%}
+              {%- if group.app_id != 'bundleboost' -%}{%- continue -%}{%- endif -%}
+              {%- for plan in group.selling_plans -%}
+                {%- liquid
+                  assign plan_key = plan.id | append: ''
+                  assign plan_override = plan_overrides[plan_key]
+                  if plan_override.hidden
+                    continue
+                  endif
+                  assign adjustment = plan.price_adjustments.first
+                  assign plan_discount = ''
+                  if adjustment.value_type == 'percentage'
+                    assign plan_discount = adjustment.value | append: '%'
+                  elsif adjustment.value_type == 'fixed_amount'
+                    assign plan_discount = adjustment.value | money
+                  endif
+                -%}
+                <option value="{{ plan.id }}" data-discount="{{ plan_discount | escape }}">
+                  {%- if plan_override.label != blank -%}
+                    {{- plan_override.label | escape -}}
+                  {%- else -%}
+                    {%- if own_groups > 1 -%}{{ group.name | escape }}: {% endif -%}
+                    {{- plan.name | escape -}}
+                  {%- endif -%}
+                </option>
+              {%- endfor -%}
+            {%- endfor -%}
+          </select>
+          {%- if first_allocation -%}
+            {%- capture note_price -%}<span data-bb-plan-note-price>{{ first_allocation.price | money }}</span>{%- endcapture -%}
+            <p class="bb-purchase__terms">{{ 'purchase_options.billing_note_html' | t: price: note_price }}</p>
+          {%- endif -%}
+        </div>
+      </div>
+    {%- endif -%}
   </div>
 {%- endif -%}
 

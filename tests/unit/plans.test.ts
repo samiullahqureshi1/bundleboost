@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyWidgetPlan, planFor, planFromHandle, PLANS, WIDGET_DEFAULTS } from "../../app/lib/plans";
+import { applyWidgetPlan, planFor, planFromHandle, PLANS, sameSetting, WIDGET_DEFAULTS } from "../../app/lib/plans";
 
 describe("plans", () => {
   it("matches the published plan sheet", () => {
@@ -23,24 +23,52 @@ describe("plans", () => {
     expect(planFor((p) => p.activeCampaigns >= 100)).toBeNull();
   });
 
-  it("publishes default widget styling for settings a plan doesn't include", () => {
+  it("splits widget options across plans, each including the one below", () => {
+    expect(PLANS.free.widget).toEqual(
+      expect.arrayContaining(["heading", "subheading", "layout", "showSavings", "highlightBestDeal", "accentColor"]),
+    );
+    expect(PLANS.free.widget).not.toContain("borderRadius");
+    expect(PLANS.free.widget).toContain("showPurchaseOptions");
+    expect(PLANS.free.widget).not.toContain("subscribeLabel");
+    expect(PLANS.growth.widget).toEqual(expect.arrayContaining(["oneTimeLabel", "subscribeLabel", "frequencyLabel"]));
+    expect(PLANS.growth.widget).toEqual(expect.arrayContaining([...PLANS.free.widget, "buyLabel", "spacing", "textColor"]));
+    expect(PLANS.growth.widget).not.toContain("headingSize");
+    expect(PLANS.pro.widget).toEqual(expect.arrayContaining([...PLANS.growth.widget, "headingSize", "badgeColor"]));
+    expect(PLANS.pro.widget).toHaveLength(Object.keys(WIDGET_DEFAULTS).length);
+  });
+
+  it("publishes defaults for options above the shop's plan", () => {
     const custom = {
+      ...WIDGET_DEFAULTS,
       heading: "Stock up",
-      layout: "GRID",
       accentColor: "#112233",
-      textColor: "#445566",
-      backgroundColor: "#000000",
       borderRadius: 20,
-      showSavings: false,
-      highlightBestDeal: false,
+      spacing: "SPACIOUS",
+      headingSize: 22,
+      badgeColor: "#00FF00",
     };
-    expect(applyWidgetPlan(custom, PLANS.free)).toEqual({ ...WIDGET_DEFAULTS, heading: "Stock up" });
-    expect(applyWidgetPlan(custom, PLANS.growth)).toMatchObject({
-      layout: "GRID",
+    expect(applyWidgetPlan(custom, PLANS.free)).toEqual({ ...WIDGET_DEFAULTS, heading: "Stock up", accentColor: "#112233" });
+    expect(applyWidgetPlan(custom, PLANS.growth)).toEqual({
+      ...WIDGET_DEFAULTS,
+      heading: "Stock up",
       accentColor: "#112233",
-      textColor: WIDGET_DEFAULTS.textColor,
-      borderRadius: WIDGET_DEFAULTS.borderRadius,
+      borderRadius: 20,
+      spacing: "SPACIOUS",
     });
     expect(applyWidgetPlan(custom, PLANS.pro)).toEqual(custom);
+  });
+
+  it("falls back to defaults for fields a plan doesn't include", () => {
+    const restricted = { ...PLANS.free, widget: ["heading" as const] };
+    const custom = { ...WIDGET_DEFAULTS, heading: "Stock up", accentColor: "#112233", badgeText: "Popular" };
+    expect(applyWidgetPlan(custom, restricted)).toEqual({ ...WIDGET_DEFAULTS, heading: "Stock up" });
+  });
+
+  it("compares settings including colours and plan overrides", () => {
+    expect(sameSetting("#ABCDEF", "#abcdef")).toBe(true);
+    expect(sameSetting({}, {})).toBe(true);
+    expect(sameSetting({ "1": { hidden: true } }, {})).toBe(false);
+    expect(PLANS.free.widget).not.toContain("planOverrides");
+    expect(PLANS.growth.widget).toContain("planOverrides");
   });
 });

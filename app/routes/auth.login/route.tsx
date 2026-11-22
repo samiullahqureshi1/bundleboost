@@ -1,54 +1,29 @@
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
-import { useState } from "react";
-import {
-  Form,
-  useActionData,
-  useLoaderData,
-  type ActionFunctionArgs,
-  type LoaderFunctionArgs,
-} from "react-router";
+import { useLoaderData, type LoaderFunctionArgs } from "react-router";
 import { login } from "../../shopify.server";
 import { loginErrorMessage } from "./error.server";
-import { useFieldEvents, readValue } from "../../components/use-field-events";
 
+/**
+ * Shopify can send merchants here with ?shop=…; `login` then redirects them
+ * to install/authorize. There's no form to type a shop domain: App Store
+ * apps are installed and opened from Shopify only.
+ */
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const errors = loginErrorMessage(await login(request));
-
   return { errors };
 };
 
-export const action = async ({ request }: ActionFunctionArgs) => {
-  const errors = loginErrorMessage(await login(request));
-
-  return {
-    errors,
-  };
-};
-
 export default function Auth() {
-  const loaderData = useLoaderData<typeof loader>();
-  const actionData = useActionData<typeof action>();
-  const [shop, setShop] = useState("");
-  const { errors } = actionData || loaderData;
-  const ref = useFieldEvents<HTMLElementTagNameMap["s-text-field"]>((el) => setShop(readValue(el)));
-
+  const { errors } = useLoaderData<typeof loader>();
   return (
     <AppProvider embedded={false}>
       <s-page>
-        <Form method="post">
-          <s-section heading="Log in to BundleBoost">
-            <s-text-field
-              ref={ref}
-              name="shop"
-              label="Shop domain"
-              details="example.myshopify.com"
-              value={shop}
-              autocomplete="on"
-              error={errors.shop}
-            ></s-text-field>
-            <s-button type="submit">Log in</s-button>
-          </s-section>
-        </Form>
+        <s-section heading="Open BundleBoost from Shopify">
+          <s-paragraph>
+            Open BundleBoost from your Shopify admin (Apps → BundleBoost), or install it from the Shopify App Store.
+          </s-paragraph>
+          {errors.shop && <s-paragraph tone="critical">{errors.shop}</s-paragraph>}
+        </s-section>
       </s-page>
     </AppProvider>
   );

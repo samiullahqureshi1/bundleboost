@@ -1,3 +1,4 @@
+import { WIDGET_DEFAULTS } from "../../app/lib/plans";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getHomeData, updateSetupGuide } from "../../app/.server/services/home.service";
 import { changeCampaignStatus, createDraftCampaign } from "../../app/.server/services/campaign.service";
@@ -52,6 +53,7 @@ describe("getHomeData", () => {
 
   it("marks the widget step done once the merchant saves widget settings", async () => {
     await updateWidgetSettings({ shopId: shop.id, actorId: null }, {
+      ...WIDGET_DEFAULTS,
       heading: "Save more", layout: "GRID", accentColor: "#112233", textColor: "#000000",
       backgroundColor: "#FFFFFF", borderRadius: 4, showSavings: true, highlightBestDeal: false,
     });

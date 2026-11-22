@@ -175,3 +175,52 @@ describe("function configuration contract", () => {
     expect(bytes).toBeGreaterThan(FUNCTION_CONFIG_MAX_BYTES);
   });
 });
+
+describe("subscription-only and one-time-only campaigns", () => {
+  const subscriptionLine = (id: number, product: number, variant: number, quantity: number) => ({
+    ...line(id, product, variant, quantity),
+    sellingPlanAllocation: { __typename: "SellingPlanAllocation" },
+  });
+  const source = {
+    discountType: "PERCENTAGE" as const,
+    message: "Subscriber perk",
+    products: [{ productGid: P(1), variantGids: [] }],
+    tiers: [{ minQuantity: 1, value: "10" }],
+  };
+
+  it("writes the purchase type into the config only when it narrows the campaign", () => {
+    expect(buildFunctionConfig({ ...source, purchaseType: "SUBSCRIPTION" }).s).toBe("S");
+    expect(buildFunctionConfig({ ...source, purchaseType: "ONE_TIME" }).s).toBe("O");
+    expect("s" in buildFunctionConfig({ ...source, purchaseType: "BOTH" })).toBe(false);
+    expect(parseConfig({ ...buildFunctionConfig(source), s: "X" })?.s).toBeUndefined();
+  });
+
+  it("gives a 1-item subscription its discount and skips one-time lines", () => {
+    const config = buildFunctionConfig({ ...source, purchaseType: "SUBSCRIPTION" });
+    const result = cartLinesDiscountsGenerateRun(
+      input([line(1, 1, 11, 1), subscriptionLine(2, 1, 12, 1)], config),
+    );
+    expect(result.operations).toHaveLength(1);
+    const [candidate] = result.operations[0].productDiscountsAdd.candidates;
+    expect(candidate.targets).toEqual([{ cartLine: { id: "gid://shopify/CartLine/2" } }]);
+    expect(candidate.value).toEqual({ percentage: { value: "10" } });
+  });
+
+  it("counts only matching lines toward a tier", () => {
+    const config = buildFunctionConfig({ ...source, purchaseType: "SUBSCRIPTION", tiers: [{ minQuantity: 3, value: "10" }] });
+    // 2 one-time + 2 subscription: only 2 subscription items count, below the tier.
+    expect(
+      cartLinesDiscountsGenerateRun(input([line(1, 1, 11, 2), subscriptionLine(2, 1, 12, 2)], config)).operations,
+    ).toEqual([]);
+  });
+
+  it("one-time-only campaigns ignore subscription lines", () => {
+    const config = buildFunctionConfig({ ...source, purchaseType: "ONE_TIME", tiers: [{ minQuantity: 2, value: "5" }] });
+    const result = cartLinesDiscountsGenerateRun(
+      input([line(1, 1, 11, 2), subscriptionLine(2, 1, 12, 5)], config),
+    );
+    expect(result.operations[0].productDiscountsAdd.candidates[0].targets).toEqual([
+      { cartLine: { id: "gid://shopify/CartLine/1" } },
+    ]);
+  });
+});

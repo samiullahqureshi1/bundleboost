@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7C6AF7"/>
+      <stop offset="1" stop-color="#3F2BB8"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.2" cy="0.15" r="0.8">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.26"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="box" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E4DEFF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Full-bleed square: Shopify rounds the corners itself. -->
+  <rect width="1200" height="1200" fill="url(#bg)"/>
+  <rect width="1200" height="1200" fill="url(#glow)"/>
+
+  <!-- Three rising bundles (packages): buy more, save more. -->
+  <g>
+    <rect x="270" y="690" width="190" height="260" rx="34" fill="url(#box)" opacity="0.66"/>
+    <rect x="270" y="770" width="190" height="30" fill="#5B47E0" opacity="0.22"/>
+
+    <rect x="505" y="550" width="190" height="400" rx="34" fill="url(#box)" opacity="0.84"/>
+    <rect x="505" y="640" width="190" height="30" fill="#5B47E0" opacity="0.22"/>
+
+    <rect x="740" y="400" width="190" height="550" rx="34" fill="url(#box)"/>
+    <rect x="740" y="500" width="190" height="30" fill="#5B47E0" opacity="0.22"/>
+  </g>
+
+  <!-- Boost: one rising stroke clear of the bundles. -->
+  <line x1="300" y1="560" x2="815" y2="245" stroke="#5FF0B8" stroke-width="66" stroke-linecap="round"/>
+  <path d="M720 190 L905 190 L905 375 Z" fill="#5FF0B8" stroke="#5FF0B8" stroke-width="30" stroke-linejoin="round"/>
+</svg>

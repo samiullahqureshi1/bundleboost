@@ -8,6 +8,8 @@ export function toCampaignDto(campaign: CampaignDetail) {
     status: campaign.status,
     discountType: campaign.discountType,
     discountLabel: campaign.discountLabel,
+    purchaseType: campaign.purchaseType,
+    recurringCycleLimit: campaign.recurringCycleLimit,
     shopifyDiscountId: campaign.shopifyDiscountId,
     syncStatus: campaign.syncStatus,
     syncError: campaign.syncError,

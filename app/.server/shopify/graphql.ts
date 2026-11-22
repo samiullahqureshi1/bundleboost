@@ -1,3 +1,4 @@
+import type { ApiVersion } from "@shopify/shopify-app-react-router/server";
 import { ShopifyApiError } from "../errors";
 import { logger } from "../logger";
 
@@ -9,7 +10,7 @@ import { logger } from "../logger";
 export interface AdminGraphqlClient {
   graphql: (
     query: string,
-    options?: { variables?: Record<string, unknown> },
+    options?: { variables?: Record<string, unknown>; apiVersion?: ApiVersion },
   ) => Promise<Response>;
 }
 
@@ -22,10 +23,13 @@ export async function adminQuery<T>(
   admin: AdminGraphqlClient,
   query: string,
   variables?: Record<string, unknown>,
+  // A newer API version for this one call (e.g. an operation not in the default).
+  { apiVersion }: { apiVersion?: ApiVersion } = {},
 ): Promise<T> {
   // The library throws on HTTP-level and GraphQL errors; it also throws a
   // Response for re-authentication, which must propagate untouched.
-  const response = await admin.graphql(query, variables ? { variables } : undefined);
+  const options = variables || apiVersion ? { ...(variables ? { variables } : {}), ...(apiVersion ? { apiVersion } : {}) } : undefined;
+  const response = await admin.graphql(query, options);
   const body = (await response.json()) as GraphqlEnvelope<T>;
   if (body.errors?.length || !body.data) {
     logger.error("Admin GraphQL error", {

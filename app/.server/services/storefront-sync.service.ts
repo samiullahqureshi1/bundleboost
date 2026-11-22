@@ -28,11 +28,33 @@ export type StorefrontConfig = {
     border_radius: number;
     show_savings: boolean;
     highlight_best_deal: boolean;
+    subheading: string;
+    buy_label: string;
+    badge_text: string;
+    spacing: "compact" | "comfortable" | "spacious";
+    heading_size: number;
+    text_size: number;
+    tier_border_color: string;
+    selected_background_color: string;
+    savings_color: string;
+    badge_color: string;
+    badge_text_color: string;
+    container_border_color: string;
+    show_price_per_item: boolean;
+    show_container_border: boolean;
+    show_purchase_options: boolean;
+    one_time_label: string;
+    subscribe_label: string;
+    frequency_label: string;
+    /** Selling plan id -> { label?, hidden? } set by the merchant. */
+    plan_overrides: Record<string, { label?: string; hidden?: boolean }>;
   };
   products: Record<
     string,
     {
       type: "percentage" | "fixed";
+      /** Which purchases the offer is for: the widget shows it only for those. */
+      purchase: "one_time" | "subscription" | "both";
       variants: string[];
       tiers: { qty: number; value: number; label: string }[];
     }[]
@@ -67,6 +89,12 @@ export async function buildStorefrontConfig(shopId: string): Promise<StorefrontC
       const key = numericId(product.productGid);
       (products[key] ??= []).push({
         type: campaign.discountType === "PERCENTAGE" ? "percentage" : "fixed",
+        purchase:
+          campaign.purchaseType === "SUBSCRIPTION"
+            ? "subscription"
+            : campaign.purchaseType === "ONE_TIME"
+              ? "one_time"
+              : "both",
         variants: product.variants.map((v) => numericId(v.variantGid)),
         tiers,
       });
@@ -85,6 +113,25 @@ export async function buildStorefrontConfig(shopId: string): Promise<StorefrontC
       border_radius: widget.borderRadius,
       show_savings: widget.showSavings,
       highlight_best_deal: widget.highlightBestDeal,
+      subheading: widget.subheading,
+      buy_label: widget.buyLabel,
+      badge_text: widget.badgeText,
+      spacing: widget.spacing.toLowerCase() as StorefrontConfig["widget"]["spacing"],
+      heading_size: widget.headingSize,
+      text_size: widget.textSize,
+      tier_border_color: widget.tierBorderColor,
+      selected_background_color: widget.selectedBackgroundColor,
+      savings_color: widget.savingsColor,
+      badge_color: widget.badgeColor,
+      badge_text_color: widget.badgeTextColor,
+      container_border_color: widget.containerBorderColor,
+      show_price_per_item: widget.showPricePerItem,
+      show_container_border: widget.showContainerBorder,
+      show_purchase_options: widget.showPurchaseOptions,
+      one_time_label: widget.oneTimeLabel,
+      subscribe_label: widget.subscribeLabel,
+      frequency_label: widget.frequencyLabel,
+      plan_overrides: (widget.planOverrides ?? {}) as Record<string, { label?: string; hidden?: boolean }>,
     },
     products,
   };

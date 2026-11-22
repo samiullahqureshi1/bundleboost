@@ -64,11 +64,11 @@ export async function getShopPlan(
     checkedAt: row?.lastCheckedAt?.toISOString() ?? null,
   });
 
-  // Only trust the cache if the store is already on an ACTIVE paid plan.
-  // If the store is on Free (or has no active subscription cached), always check
-  // Shopify so newly approved charges take effect immediately across all screens.
-  const isPayingPlan = row?.status === "ACTIVE" && Boolean(row.planName) && row.planName !== "free";
-  const fresh = isPayingPlan && row?.lastCheckedAt && Date.now() - row.lastCheckedAt.getTime() < CACHE_MS;
+  // Use the cached plan for a few minutes on every plan, Free included, so page
+  // navigation doesn't wait on Shopify each time. New charges still apply right
+  // away: merchants return to the billing page, which passes { fresh: true },
+  // and app_subscriptions/update clears lastCheckedAt.
+  const fresh = row?.lastCheckedAt && Date.now() - row.lastCheckedAt.getTime() < CACHE_MS;
   if (fresh && !options.fresh) return { ...cached(), verified: true };
 
   try {

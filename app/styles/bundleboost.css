@@ -1309,6 +1309,13 @@ html body {
   font-weight: 550;
   color: var(--bb-ink);
 }
+.bb-fieldlabel--group {
+  margin-block-end: 10px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bb-ink-3);
+}
 .bb-fieldhint {
   display: block;
   margin-block-start: 6px;
@@ -2348,4 +2355,293 @@ html body {
 .bb-limitnote {
   font-size: 12px;
   color: var(--bb-ink-2);
+}
+
+/* ---------- Widget editor: loading lock and save row ---------- */
+.bb-editorfields {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.bb-editorfields--loading {
+  pointer-events: none;
+  opacity: 0.65;
+}
+.bb-loadingnote {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(91, 71, 224, 0.08);
+  font-size: 12.5px;
+  font-weight: 550;
+  color: var(--bb-brand);
+}
+.bb-visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.bb-savebar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-block-start: 14px;
+}
+.bb-savebar__status {
+  flex: 1 1 100%;
+  font-size: 12px;
+  color: var(--bb-ink-3);
+}
+.bb-editor__aside .bb-savebar .bb-btn {
+  flex: 1 1 0;
+  inline-size: auto;
+}
+.bb-savebar .bb-btn:disabled {
+  cursor: default;
+  transform: none;
+}
+
+.bb-resetrow {
+  margin-block-start: 20px;
+  padding-block-start: 16px;
+  border-block-start: 1px solid var(--bb-line);
+}
+
+.bb-fieldnarrow {
+  max-inline-size: 260px;
+}
+
+/* Widget page: options above the plan being tried in the preview */
+.bb-trynote {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid rgba(91, 71, 224, 0.25);
+  border-radius: 14px;
+  background: rgba(91, 71, 224, 0.07);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--bb-ink-2);
+}
+.bb-trynote strong {
+  color: var(--bb-ink);
+}
+.bb-trynote__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-block-start: 4px;
+}
+.bb-editor__aside .bb-trynote .bb-btn {
+  inline-size: auto;
+}
+
+/* Widget page: subscription frequency list (rename / hide) */
+.bb-fieldhint--top {
+  margin: 0 0 10px;
+}
+.bb-plansempty {
+  margin: 0;
+  line-height: 1.55;
+}
+.bb-freqlist {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bb-freqrow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--bb-line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+}
+.bb-freqrow--hidden .bb-freqrow__name {
+  opacity: 0.5;
+}
+.bb-freqrow__name {
+  display: grid;
+  gap: 2px;
+  min-inline-size: 0;
+  font-size: 12.5px;
+}
+.bb-freqrow__name small {
+  color: var(--bb-ink-3);
+}
+.bb-freqrow__show {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 550;
+  cursor: pointer;
+}
+@media (max-width: 560px) {
+  .bb-freqrow {
+    grid-template-columns: 1fr auto;
+  }
+  .bb-freqrow > :nth-child(2) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+/* Subscription plan editor */
+.bb-freqedit {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+.bb-freqedit__row {
+  display: grid;
+  grid-template-columns: auto 88px 120px 120px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+.bb-freqedit__every {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--bb-ink-2);
+}
+.bb-subpreview {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 2px solid var(--bb-brand);
+  border-radius: 12px;
+  background: #fff;
+}
+.bb-subpreview__title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--bb-ink);
+}
+.bb-subpreview__save {
+  color: var(--bb-brand);
+}
+.bb-subpreview__label {
+  font-size: 12px;
+  color: var(--bb-ink-3);
+}
+.bb-subpreview__select {
+  padding: 8px 10px;
+  border: 1px solid var(--bb-line);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  background: #fff;
+}
+@media (max-width: 720px) {
+  .bb-freqedit__row {
+    grid-template-columns: auto 80px minmax(0, 1fr) auto;
+  }
+  .bb-freqedit__discount,
+  .bb-freqedit__label {
+    grid-column: 2 / -1;
+  }
+}
+
+/* Subscribers list */
+.bb-sublist {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bb-subrow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.5fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+}
+.bb-subrow > div {
+  display: grid;
+  gap: 3px;
+  min-inline-size: 0;
+  font-size: 12.5px;
+}
+.bb-subrow small {
+  color: var(--bb-ink-3);
+}
+.bb-subrow__what span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bb-subrow__when .bb-state {
+  justify-self: start;
+}
+.bb-subrow__actions {
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+@media (max-width: 900px) {
+  .bb-subrow {
+    grid-template-columns: 1fr 1fr;
+  }
+  .bb-subrow__actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
+.bb-subrow__link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(91, 71, 224, 0.4);
+  text-underline-offset: 3px;
+}
+.bb-subrow__link:hover {
+  color: var(--bb-brand);
+}
+
+/* Spinner inside custom buttons while they work. */
+.bb-spinner {
+  inline-size: 13px;
+  block-size: 13px;
+  border: 2px solid currentColor;
+  border-inline-end-color: transparent;
+  border-radius: 50%;
+  animation: bb-spin 0.7s linear infinite;
+}
+@keyframes bb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bb-spinner {
+    animation-duration: 1.6s;
+  }
+}
+
+.bb-skipped {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(31, 122, 76, 0.1);
+  color: #1f7a4c;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
 }

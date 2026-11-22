@@ -14,10 +14,18 @@ export const CAMPAIGN_LIMITS = {
   maxTiers: 20,
   maxQuantity: 10_000,
   maxFixedAmount: 1_000_000,
+  // Subscription orders a discount can cover (0 = every order).
+  maxRecurringCycles: 100,
 } as const;
 
 export const DISCOUNT_TYPES = ["PERCENTAGE", "FIXED_AMOUNT"] as const;
 export type DiscountTypeValue = (typeof DISCOUNT_TYPES)[number];
+
+export const PURCHASE_TYPES = ["ONE_TIME", "SUBSCRIPTION", "BOTH"] as const;
+export type PurchaseTypeValue = (typeof PURCHASE_TYPES)[number];
+
+/** Lowest tier quantity: 1 for subscription-only campaigns, otherwise 2. */
+export const minTierQuantity = (purchaseType: PurchaseTypeValue) => (purchaseType === "SUBSCRIPTION" ? 1 : 2);
 
 const PRODUCT_GID = /^gid:\/\/shopify\/Product\/\d+$/;
 const VARIANT_GID = /^gid:\/\/shopify\/ProductVariant\/\d+$/;
@@ -27,7 +35,8 @@ const tierSchema = z.object({
   minQuantity: z.coerce
     .number({ error: "Enter a quantity" })
     .int("Quantity must be a whole number")
-    .min(2, "Quantity must be at least 2")
+    // 1 is only allowed for subscription-only campaigns (checked below).
+    .min(1, "Quantity must be at least 1")
     .max(CAMPAIGN_LIMITS.maxQuantity, `Quantity must be ${CAMPAIGN_LIMITS.maxQuantity} or less`),
   value: z
     .string({ error: "Enter a discount value" })
@@ -76,10 +85,35 @@ export const campaignInputSchema = z
       .array(tierSchema)
       .min(1, "Add at least one quantity tier")
       .max(CAMPAIGN_LIMITS.maxTiers, `Use ${CAMPAIGN_LIMITS.maxTiers} tiers or fewer`),
+    // Optional so older clients keep Shopify's defaults (both, first order).
+    purchaseType: z.enum(PURCHASE_TYPES, { error: "Choose which purchases get the discount" }).default("BOTH"),
+    recurringCycleLimit: z.coerce
+      .number({ error: "Enter a number of orders" })
+      .int("Use a whole number")
+      .min(0, "Use 0 or more")
+      .max(
+        CAMPAIGN_LIMITS.maxRecurringCycles,
+        `Use ${CAMPAIGN_LIMITS.maxRecurringCycles} orders or fewer, or choose every order`,
+      )
+      .default(1),
     startsAt: optionalDate.optional(),
     endsAt: optionalDate.optional(),
   })
   .superRefine((input, ctx) => {
+    // "Buy 1" is a plain discount, which only makes sense as a subscriber
+    // perk; quantity breaks for everyone start at 2.
+    if (input.purchaseType !== "SUBSCRIPTION") {
+      input.tiers.forEach((tier, i) => {
+        if (tier.minQuantity < 2) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["tiers", i, "minQuantity"],
+            message: "Quantity must be at least 2. Quantity 1 is allowed when the campaign applies to subscriptions only.",
+          });
+        }
+      });
+    }
+
     // Per-tier value bounds depend on the discount type.
     input.tiers.forEach((tier, i) => {
       const value = Number(tier.value);

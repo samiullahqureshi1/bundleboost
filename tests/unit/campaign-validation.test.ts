@@ -172,3 +172,35 @@ describe("findOverlappingProducts", () => {
     expect(findOverlappingProducts([{ productGid: P1, variantGids: [] }], [{ productGid: P2, variantGids: [] }])).toEqual([]);
   });
 });
+
+describe("subscription options", () => {
+  it("defaults to both purchase types and the first subscription order (Shopify's defaults)", () => {
+    const result = validateCampaignInput(valid());
+    expect(result.success && result.data).toMatchObject({ purchaseType: "BOTH", recurringCycleLimit: 1 });
+  });
+
+  it("accepts each purchase type and order limit, including every order (0)", () => {
+    for (const purchaseType of ["ONE_TIME", "SUBSCRIPTION", "BOTH"]) {
+      expect(validateCampaignInput(valid({ purchaseType })).success).toBe(true);
+    }
+    const result = validateCampaignInput(valid({ purchaseType: "SUBSCRIPTION", recurringCycleLimit: "0" }));
+    expect(result.success && result.data.recurringCycleLimit).toBe(0);
+  });
+
+  it("rejects unknown purchase types and out-of-range order limits", () => {
+    expect(errorsOf(valid({ purchaseType: "WEEKLY" })).purchaseType).toBeTruthy();
+    expect(errorsOf(valid({ recurringCycleLimit: -1 })).recurringCycleLimit).toBeTruthy();
+    expect(errorsOf(valid({ recurringCycleLimit: 101 })).recurringCycleLimit).toBeTruthy();
+    expect(errorsOf(valid({ recurringCycleLimit: 2.5 })).recurringCycleLimit).toBeTruthy();
+  });
+});
+
+describe("quantity 1 tiers", () => {
+  it("are allowed only for subscription-only campaigns", () => {
+    const tiers = [{ minQuantity: 1, value: "10" }];
+    expect(validateCampaignInput(valid({ purchaseType: "SUBSCRIPTION", tiers })).success).toBe(true);
+    expect(errorsOf(valid({ purchaseType: "BOTH", tiers }))["tiers.0.minQuantity"]).toMatch(/subscriptions only/);
+    expect(errorsOf(valid({ purchaseType: "ONE_TIME", tiers }))["tiers.0.minQuantity"]).toMatch(/at least 2/);
+    expect(errorsOf(valid({ purchaseType: "SUBSCRIPTION", tiers: [{ minQuantity: 0, value: "10" }] }))["tiers.0.minQuantity"]).toBeTruthy();
+  });
+});

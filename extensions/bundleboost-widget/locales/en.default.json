@@ -4,6 +4,13 @@
     "buy_quantity": "Buy {{ quantity }}+",
     "each": "each",
     "save_percent": "Save {{ percent }}%",
-    "save_amount_each": "Save {{ amount }} each"
+    "save_amount_each": "Save {{ amount }} each",
+    "subscription_only": "With a subscription"
+  },
+  "purchase_options": {
+    "one_time": "One-time purchase",
+    "subscribe": "Subscribe & save {discount}",
+    "frequency": "Delivery frequency",
+    "billing_note_html": "{{ price }} charged today, then with every delivery."
   }
 }

@@ -48,6 +48,42 @@ async function activeCampaign(overrides: Record<string, unknown> = {}) {
   return { id: draft.id, result };
 }
 
+describe("subscription options", () => {
+  it("keeps Shopify's defaults for existing campaigns: both purchase types, first order", async () => {
+    const { id } = await activeCampaign();
+    const campaign = await getCampaign(ctx.shopId, id);
+    expect(campaign).toMatchObject({ purchaseType: "BOTH", recurringCycleLimit: 1 });
+    expect(store.discounts.get(campaign.shopifyDiscountId!)).toMatchObject({
+      appliesOnOneTimePurchase: true,
+      appliesOnSubscription: true,
+      recurringCycleLimit: 1,
+    });
+  });
+
+  it("sends subscription-only discounts with their order limit", async () => {
+    const { id } = await activeCampaign({ purchaseType: "SUBSCRIPTION", recurringCycleLimit: 3 });
+    const campaign = await getCampaign(ctx.shopId, id);
+    expect(store.discounts.get(campaign.shopifyDiscountId!)).toMatchObject({
+      appliesOnOneTimePurchase: false,
+      appliesOnSubscription: true,
+      recurringCycleLimit: 3,
+    });
+  });
+
+  it("omits the order limit for one-time-only discounts and updates live discounts", async () => {
+    const { id } = await activeCampaign({ purchaseType: "BOTH", recurringCycleLimit: 0 });
+    const campaign = await getCampaign(ctx.shopId, id);
+    expect(store.discounts.get(campaign.shopifyDiscountId!)).toMatchObject({ recurringCycleLimit: 0 });
+
+    await updateCampaign(ctx, id, input({ purchaseType: "ONE_TIME", recurringCycleLimit: 5 }));
+    const updated = await getCampaign(ctx.shopId, id);
+    expect(updated).toMatchObject({ purchaseType: "ONE_TIME", recurringCycleLimit: 1 });
+    const discount = store.discounts.get(updated.shopifyDiscountId!);
+    expect(discount).toMatchObject({ appliesOnOneTimePurchase: true, appliesOnSubscription: false });
+    expect(discount?.recurringCycleLimit).toBeUndefined();
+  });
+});
+
 describe("discount sync on status changes", () => {
   it("drafts never create a Shopify discount", async () => {
     await createDraftCampaign(ctx, input());
@@ -203,7 +239,7 @@ describe("storefront configuration", () => {
     expect(published).toEqual(await buildStorefrontConfig(ctx.shopId));
     expect(Object.keys(published.products)).toEqual(["1"]);
     expect(published.products["1"]).toEqual([
-      { type: "percentage", variants: ["101"], tiers: [{ qty: 2, value: 5, label: "" }, { qty: 4, value: 10, label: "" }] },
+      { type: "percentage", purchase: "both", variants: ["101"], tiers: [{ qty: 2, value: 5, label: "" }, { qty: 4, value: 10, label: "" }] },
     ]);
     expect(published.widget).toMatchObject({ heading: "Buy more, save more", layout: "stacked" });
 

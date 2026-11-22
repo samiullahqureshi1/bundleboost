@@ -1,0 +1,7 @@
+/*
+ * The storefront block's own stylesheet, for the Widget page preview.
+ * Imported (and inlined by Vite) from here because in `shopify app dev` the
+ * CLI proxy sends every /extensions/... URL to the theme extension server,
+ * so the browser can't load the file from that path directly.
+ */
+@import "../../extensions/bundleboost-widget/assets/quantity-breaks.css";

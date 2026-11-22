@@ -1,0 +1,14 @@
+{
+  "name": "Subscription links",
+  "description": "Links to My subscriptions from orders with a subscription and from the profile page.",
+  "order": {
+    "heading": "This order is part of a subscription",
+    "body": "Skip, pause, change or cancel your deliveries anytime.",
+    "action": "Manage subscription"
+  },
+  "profile": {
+    "heading": "Subscriptions",
+    "body": "Manage your deliveries, payment and address.",
+    "action": "View my subscriptions"
+  }
+}

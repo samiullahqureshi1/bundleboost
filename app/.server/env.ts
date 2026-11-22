@@ -24,6 +24,12 @@ const serverEnvSchema = z.object({
   // Handle of the app in the Partner Dashboard, used to build the
   // Shopify-hosted plan selection URL. Optional until pricing is configured.
   SHOPIFY_APP_HANDLE: z.string().optional(),
+  // Shared secret for the hourly renewal job (POST /jobs/renewals with
+  // "Authorization: Bearer <secret>"). Unset = the endpoint is disabled.
+  JOBS_SECRET: z.string().min(24, "must be at least 24 characters").optional(),
+  // Set in Vercel: Vercel Cron sends it as "Authorization: Bearer <secret>"
+  // when it calls /jobs/renewals (see vercel.json).
+  CRON_SECRET: z.string().min(24, "must be at least 24 characters").optional(),
   // Shopify App Pricing: subscriptions are read from the Partner API.
   // All three are needed to verify a merchant's plan; without them every
   // shop is treated as Free.

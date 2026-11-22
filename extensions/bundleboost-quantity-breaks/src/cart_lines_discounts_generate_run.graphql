@@ -4,6 +4,10 @@ query CartLinesDiscountsGenerateRunInput {
     lines {
       id
       quantity
+      # Only whether the line is a subscription matters (cheapest selection).
+      sellingPlanAllocation {
+        __typename
+      }
       merchandise {
         __typename
         ... on ProductVariant {

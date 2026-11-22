@@ -1,0 +1,18 @@
+# Links to the "My subscriptions" page: on the order status page of orders
+# with a subscription, and on the customer's profile page.
+api_version = "2026-10"
+
+[[extensions]]
+name = "t:name"
+description = "t:description"
+handle = "bundleboost-subscription-links"
+uid = "e9f79bd3-9183-8663-0e0f-a0940b8cf6ff366301a5"
+type = "ui_extension"
+
+  [[extensions.targeting]]
+  module = "./src/OrderStatusLink.tsx"
+  target = "customer-account.order-status.block.render"
+
+  [[extensions.targeting]]
+  module = "./src/ProfileLink.tsx"
+  target = "customer-account.profile.block.render"
